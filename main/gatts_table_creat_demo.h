@@ -6,11 +6,9 @@
    CONDITIONS OF ANY KIND, either express or implied.
 */
 
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-
 
 /* Attributes State Machine */
 enum
