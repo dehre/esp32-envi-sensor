@@ -47,10 +47,6 @@
 #define PROFILE_APP_IDX 0
 #define SERVICE_INSTANCE_ID 0
 
-// TODO LORIS: not needed, after adv_config_done becomes a bool
-#define ADV_CONFIG_FLAG (1 << 0)
-#define SCAN_RSP_CONFIG_FLAG (1 << 1)
-
 //==================================================================================================
 // ENUMS - STRUCTS - TYPEDEFS
 //==================================================================================================
@@ -89,8 +85,6 @@ static void gatts_event_handler(esp_gatts_cb_event_t event, esp_gatt_if_t gatts_
 /*
  * Advertising
  */
-// TODO LORIS: turn it into a bool
-static uint8_t adv_config_done = 0;
 
 // TODO LORIS: give it tighter scope
 static uint16_t environmental_sensing_handle_table[IDX_COUNT];
@@ -132,6 +126,7 @@ static esp_ble_adv_params_t adv_params = {
 /*
  * Profile
  */
+
 static struct gatts_profile_inst environmental_sensing_profile_tab[PROFILE_NUM] = {
     [PROFILE_APP_IDX] =
         {
@@ -143,6 +138,7 @@ static struct gatts_profile_inst environmental_sensing_profile_tab[PROFILE_NUM] 
 /*
  * Service and Characteristics
  */
+
 static const uint16_t GATTS_ENVIRONMENTAL_SENSING_SERVICE_UUID = 0x181A;
 static const uint16_t GATTS_TEMPERATURE_CHARACT_UUID = 0x2A6E;
 
@@ -259,18 +255,8 @@ static void gap_event_handler(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param
     switch (event)
     {
     case ESP_GAP_BLE_ADV_DATA_SET_COMPLETE_EVT:
-        adv_config_done &= (~ADV_CONFIG_FLAG);
-        if (adv_config_done == 0)
-        {
-            esp_ble_gap_start_advertising(&adv_params);
-        }
-        break;
     case ESP_GAP_BLE_SCAN_RSP_DATA_SET_COMPLETE_EVT:
-        adv_config_done &= (~SCAN_RSP_CONFIG_FLAG);
-        if (adv_config_done == 0)
-        {
-            esp_ble_gap_start_advertising(&adv_params);
-        }
+        esp_ble_gap_start_advertising(&adv_params);
         break;
     case ESP_GAP_BLE_ADV_START_COMPLETE_EVT:
         /* advertising start complete event to indicate advertising start successfully or failed */
@@ -316,13 +302,11 @@ static void gatts_profile_event_handler(esp_gatts_cb_event_t event, esp_gatt_if_
         {
             ESP_LOGE(GATTS_TABLE_TAG, "set device name failed, error code = %x", set_dev_name_ret);
         }
-        // config adv data
         esp_err_t ret = esp_ble_gap_config_adv_data(&adv_data);
         if (ret)
         {
             ESP_LOGE(GATTS_TABLE_TAG, "config adv data failed, error code = %x", ret);
         }
-        adv_config_done |= ADV_CONFIG_FLAG;
         esp_err_t create_attr_ret = esp_ble_gatts_create_attr_tab(gatt_db, gatts_if, IDX_COUNT, SERVICE_INSTANCE_ID);
         if (create_attr_ret)
         {
