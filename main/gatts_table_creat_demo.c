@@ -399,20 +399,15 @@ static void gatts_event_handler(esp_gatts_cb_event_t event, esp_gatt_if_t gatts_
             return;
         }
     }
-    // TODO LORIS: why do we need this here?
-    do
+    for (int idx = 0; idx < PROFILE_NUM; idx++)
     {
-        int idx;
-        for (idx = 0; idx < PROFILE_NUM; idx++)
+        /* ESP_GATT_IF_NONE, not specify a certain gatt_if, need to call every profile cb function */
+        if (gatts_if == ESP_GATT_IF_NONE || gatts_if == environmental_sensing_profile_tab[idx].gatts_if)
         {
-            /* ESP_GATT_IF_NONE, not specify a certain gatt_if, need to call every profile cb function */
-            if (gatts_if == ESP_GATT_IF_NONE || gatts_if == environmental_sensing_profile_tab[idx].gatts_if)
+            if (environmental_sensing_profile_tab[idx].gatts_cb)
             {
-                if (environmental_sensing_profile_tab[idx].gatts_cb)
-                {
-                    environmental_sensing_profile_tab[idx].gatts_cb(event, gatts_if, param);
-                }
+                environmental_sensing_profile_tab[idx].gatts_cb(event, gatts_if, param);
             }
         }
-    } while (0);
+    }
 }
