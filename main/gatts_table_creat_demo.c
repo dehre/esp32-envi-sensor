@@ -131,12 +131,10 @@ static const uint16_t GATTS_CHAR_UUID_TEST_B       = 0x2A6E; // NOTE LORIS: GATT
 
 static const uint16_t primary_service_uuid         = ESP_GATT_UUID_PRI_SERVICE;
 static const uint16_t character_declaration_uuid   = ESP_GATT_UUID_CHAR_DECLARE;
-// NOTE LORIS: these define the read-write-define characteristics
-static const uint8_t char_prop_read                = ESP_GATT_CHAR_PROP_BIT_READ;
+static const uint8_t characteristic_property_read  = ESP_GATT_CHAR_PROP_BIT_READ;
 
-// TODO LORIS: rename
-// TODO LORIS: how to store a int16_t as an uint8_t[2]?
-static const uint8_t char_value[2]                 = {0x17, 0x50};
+// TODO LORIS: how to store a int16_t as an uint8_t[2]
+static const uint8_t temperature_characteristic_value[2] = {0x17, 0x50};
 
 
 /* Full Database Description - Used to add attributes into the database */
@@ -150,12 +148,12 @@ static const esp_gatts_attr_db_t gatt_db[HRS_IDX_NB] =
     /* Characteristic Declaration */
     [IDX_CHAR_B]      =
     {{ESP_GATT_AUTO_RSP}, {ESP_UUID_LEN_16, (uint8_t *)&character_declaration_uuid, ESP_GATT_PERM_READ,
-      CHAR_DECLARATION_SIZE, CHAR_DECLARATION_SIZE, (uint8_t *)&char_prop_read}},
+      CHAR_DECLARATION_SIZE, CHAR_DECLARATION_SIZE, (uint8_t *)&characteristic_property_read}},
 
     /* Characteristic Value */
     [IDX_CHAR_VAL_B]  =
     {{ESP_GATT_AUTO_RSP}, {ESP_UUID_LEN_16, (uint8_t *)&GATTS_CHAR_UUID_TEST_B, ESP_GATT_PERM_READ | ESP_GATT_PERM_WRITE,
-      GATTS_DEMO_CHAR_VAL_LEN_MAX, sizeof(char_value), (uint8_t *)char_value}},
+      GATTS_DEMO_CHAR_VAL_LEN_MAX, sizeof(temperature_characteristic_value), (uint8_t *)temperature_characteristic_value}},
 };
 
 // NOTE LORIS: from here on, nothing should be changed
