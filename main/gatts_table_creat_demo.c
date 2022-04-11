@@ -80,26 +80,8 @@ static esp_ble_adv_data_t adv_data = {
     .min_interval        = 0x0006, //slave connection min interval, Time = min_interval * 1.25 msec
     .max_interval        = 0x0010, //slave connection max interval, Time = max_interval * 1.25 msec
     .appearance          = 0x00,
-    .manufacturer_len    = 0,    //TEST_MANUFACTURER_DATA_LEN,
-    .p_manufacturer_data = NULL, //test_manufacturer,
-    .service_data_len    = 0,
-    .p_service_data      = NULL,
-    .service_uuid_len    = sizeof(service_uuid),
-    .p_service_uuid      = service_uuid,
-    .flag = (ESP_BLE_ADV_FLAG_GEN_DISC | ESP_BLE_ADV_FLAG_BREDR_NOT_SPT),
-};
-
-// scan response data
-// TODO LORIS: do I need it?
-static esp_ble_adv_data_t scan_rsp_data = {
-    .set_scan_rsp        = true,
-    .include_name        = true,
-    .include_txpower     = true,
-    .min_interval        = 0x0006,
-    .max_interval        = 0x0010,
-    .appearance          = 0x00,
-    .manufacturer_len    = 0, //TEST_MANUFACTURER_DATA_LEN,
-    .p_manufacturer_data = NULL, //&test_manufacturer[0],
+    .manufacturer_len    = 0,
+    .p_manufacturer_data = NULL,
     .service_data_len    = 0,
     .p_service_data      = NULL,
     .service_uuid_len    = sizeof(service_uuid),
@@ -325,13 +307,6 @@ static void gatts_profile_event_handler(esp_gatts_cb_event_t event, esp_gatt_if_
             ESP_LOGE(GATTS_TABLE_TAG, "config adv data failed, error code = %x", ret);
         }
         adv_config_done |= ADV_CONFIG_FLAG;
-        // config scan response data
-        ret = esp_ble_gap_config_adv_data(&scan_rsp_data);
-        if (ret)
-        {
-            ESP_LOGE(GATTS_TABLE_TAG, "config scan response data failed, error code = %x", ret);
-        }
-        adv_config_done |= SCAN_RSP_CONFIG_FLAG;
         esp_err_t create_attr_ret = esp_ble_gatts_create_attr_tab(gatt_db, gatts_if, HRS_IDX_NB, SVC_INST_ID);
         if (create_attr_ret)
         {
