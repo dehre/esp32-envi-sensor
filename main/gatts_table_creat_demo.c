@@ -16,6 +16,10 @@
  *
  ****************************************************************************/
 
+//==================================================================================================
+// INCLUDES
+//==================================================================================================
+
 #include "esp_bt.h"
 #include "esp_log.h"
 #include "esp_system.h"
@@ -30,57 +34,29 @@
 #include "esp_gatts_api.h"
 #include "gatts_table_creat_demo.h"
 
-// clang-format off
+//==================================================================================================
+// DEFINES - MACROS
+//==================================================================================================
 
 // TODO LORIS: give your app's name
 #define GATTS_TABLE_TAG "GATTS_TABLE_DEMO"
+#define SAMPLE_DEVICE_NAME "ESP_GATTS_DEMO" // TODO LORIS: give your app's name
+#define ESP_APP_ID 0x55                     // user defined
 
-#define PROFILE_NUM                 1
-#define PROFILE_APP_IDX             0
-#define ESP_APP_ID                  0x55 // user defined
-#define SAMPLE_DEVICE_NAME          "ESP_GATTS_DEMO" // TODO LORIS: give your app's name
-#define SERVICE_INSTANCE_ID         0
+#define PROFILE_NUM 1
+#define PROFILE_APP_IDX 0
+#define SERVICE_INSTANCE_ID 0
 
-#define ADV_CONFIG_FLAG             (1 << 0)
-#define SCAN_RSP_CONFIG_FLAG        (1 << 1)
+// TODO LORIS: not needed, after adv_config_done becomes a bool
+#define ADV_CONFIG_FLAG (1 << 0)
+#define SCAN_RSP_CONFIG_FLAG (1 << 1)
 
-static uint8_t adv_config_done       = 0;
+//==================================================================================================
+// ENUMS - STRUCTS - TYPEDEFS
+//==================================================================================================
 
-uint16_t environmental_sensing_handle_table[IDX_COUNT];
-
-static uint8_t adv_service_uuid[16] = {
-    /* LSB <--------------------------------------------------------------------------------> MSB */
-    // first uuid, 16bit, [12],[13] is the advertised service (0x181A - Environmental Sensing Service)
-    0xfb, 0x34, 0x9b, 0x5f, 0x80, 0x00, 0x00, 0x80, 0x00, 0x10, 0x00, 0x00, 0x1A, 0x18, 0x00, 0x00,
-};
-
-/* The length of adv data must be less than 31 bytes */
-static esp_ble_adv_data_t adv_data = {
-    .set_scan_rsp        = false,
-    .include_name        = true,
-    .include_txpower     = true,
-    .min_interval        = 0x0006, // slave connection min interval, Time = min_interval * 1.25 msec
-    .max_interval        = 0x0010, // slave connection max interval, Time = max_interval * 1.25 msec
-    .appearance          = 0x00,
-    .manufacturer_len    = 0,
-    .p_manufacturer_data = NULL,
-    .service_data_len    = 0,
-    .p_service_data      = NULL,
-    .service_uuid_len    = sizeof(adv_service_uuid),
-    .p_service_uuid      = adv_service_uuid,
-    .flag = (ESP_BLE_ADV_FLAG_GEN_DISC | ESP_BLE_ADV_FLAG_BREDR_NOT_SPT),
-};
-
-static esp_ble_adv_params_t adv_params = {
-    .adv_int_min         = 0x20,
-    .adv_int_max         = 0x40,
-    .adv_type            = ADV_TYPE_IND,
-    .own_addr_type       = BLE_ADDR_TYPE_PUBLIC,
-    .channel_map         = ADV_CHNL_ALL,
-    .adv_filter_policy   = ADV_FILTER_ALLOW_SCAN_ANY_CON_ANY,
-};
-
-struct gatts_profile_inst {
+struct gatts_profile_inst
+{
     esp_gatts_cb_t gatts_cb;
     uint16_t gatts_if;
     uint16_t app_id;
@@ -95,49 +71,188 @@ struct gatts_profile_inst {
     esp_bt_uuid_t descr_uuid;
 };
 
-static void gatts_profile_event_handler(esp_gatts_cb_event_t event,
-					esp_gatt_if_t gatts_if, esp_ble_gatts_cb_param_t *param);
+//==================================================================================================
+// STATIC PROTOTYPES
+//==================================================================================================
 
-/* One gatt-based profile one app_id and one gatts_if, this array will store the gatts_if returned by ESP_GATTS_REG_EVT */
-static struct gatts_profile_inst environmental_sensing_profile_tab[PROFILE_NUM] = {
-    [PROFILE_APP_IDX] = {
-        .gatts_cb = gatts_profile_event_handler,
-        .gatts_if = ESP_GATT_IF_NONE,       /* Not get the gatt_if, so initial is ESP_GATT_IF_NONE */
-    },
+static void gap_event_handler(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param_t *param);
+
+static void gatts_profile_event_handler(esp_gatts_cb_event_t event, esp_gatt_if_t gatts_if,
+                                        esp_ble_gatts_cb_param_t *param);
+
+static void gatts_event_handler(esp_gatts_cb_event_t event, esp_gatt_if_t gatts_if, esp_ble_gatts_cb_param_t *param);
+
+//==================================================================================================
+// STATIC VARIABLES
+//==================================================================================================
+
+/*
+ * Advertising
+ */
+// TODO LORIS: turn it into a bool
+static uint8_t adv_config_done = 0;
+
+// TODO LORIS: give it tighter scope
+static uint16_t environmental_sensing_handle_table[IDX_COUNT];
+
+// clang-format off
+static uint8_t adv_service_uuid[16] = {
+    /* LSB <--------------------------------------------------------------------------------> MSB */
+    // first uuid, 16bit, [12],[13] is the advertised service (0x181A - Environmental Sensing Service)
+    0xfb, 0x34, 0x9b, 0x5f, 0x80, 0x00, 0x00, 0x80, 0x00, 0x10, 0x00, 0x00, 0x1A, 0x18, 0x00, 0x00,
+};
+// clang-format on
+
+/* The length of adv data must be less than 31 bytes */
+static esp_ble_adv_data_t adv_data = {
+    .set_scan_rsp = false,
+    .include_name = true,
+    .include_txpower = true,
+    .min_interval = 0x0006, // slave connection min interval, Time = min_interval * 1.25 msec
+    .max_interval = 0x0010, // slave connection max interval, Time = max_interval * 1.25 msec
+    .appearance = 0x00,
+    .manufacturer_len = 0,
+    .p_manufacturer_data = NULL,
+    .service_data_len = 0,
+    .p_service_data = NULL,
+    .service_uuid_len = sizeof(adv_service_uuid),
+    .p_service_uuid = adv_service_uuid,
+    .flag = (ESP_BLE_ADV_FLAG_GEN_DISC | ESP_BLE_ADV_FLAG_BREDR_NOT_SPT),
 };
 
-/* Service */
+static esp_ble_adv_params_t adv_params = {
+    .adv_int_min = 0x20,
+    .adv_int_max = 0x40,
+    .adv_type = ADV_TYPE_IND,
+    .own_addr_type = BLE_ADDR_TYPE_PUBLIC,
+    .channel_map = ADV_CHNL_ALL,
+    .adv_filter_policy = ADV_FILTER_ALLOW_SCAN_ANY_CON_ANY,
+};
+
+/*
+ * Profile
+ */
+static struct gatts_profile_inst environmental_sensing_profile_tab[PROFILE_NUM] = {
+    [PROFILE_APP_IDX] =
+        {
+            .gatts_cb = gatts_profile_event_handler,
+            .gatts_if = ESP_GATT_IF_NONE, /* Not get the gatt_if, so initial is ESP_GATT_IF_NONE */
+        },
+};
+
+/*
+ * Service and Characteristics
+ */
 static const uint16_t GATTS_ENVIRONMENTAL_SENSING_SERVICE_UUID = 0x181A;
-static const uint16_t GATTS_TEMPERATURE_CHARACTERISTIC_UUID    = 0x2A6E;
+static const uint16_t GATTS_TEMPERATURE_CHARACT_UUID = 0x2A6E;
 
-static const uint16_t primary_service_uuid            = ESP_GATT_UUID_PRI_SERVICE;
-static const uint16_t characteristic_declaration_uuid = ESP_GATT_UUID_CHAR_DECLARE;
-static const uint8_t characteristic_property_read     = ESP_GATT_CHAR_PROP_BIT_READ;
+static const uint16_t primary_service_uuid = ESP_GATT_UUID_PRI_SERVICE;
+static const uint16_t charact_declaration_uuid = ESP_GATT_UUID_CHAR_DECLARE;
+static const uint8_t charact_property_read = ESP_GATT_CHAR_PROP_BIT_READ;
 
-// TODO LORIS: how to store a int16_t as an uint8_t[2]
-static const uint8_t temperature_characteristic_value[2] = {0x17, 0x50};
+// TODO LORIS: store a int16_t as an uint8_t[2]
+static const uint8_t temperature_charact_value[2] = {0x17, 0x50};
 
-
+// clang-format off
 /* Full Database Description - Used to add attributes into the database */
 static const esp_gatts_attr_db_t gatt_db[IDX_COUNT] =
 {
     // Service Declaration
-    [IDX_SERVICE]        =
+    [IDX_SERVICE] =
     {{ESP_GATT_AUTO_RSP}, {ESP_UUID_LEN_16, (uint8_t *)&primary_service_uuid, ESP_GATT_PERM_READ,
       sizeof(uint16_t), sizeof(GATTS_ENVIRONMENTAL_SENSING_SERVICE_UUID), (uint8_t *)&GATTS_ENVIRONMENTAL_SENSING_SERVICE_UUID}},
 
     /* Characteristic Declaration */
-    [IDX_TEMPERATURE_CHARACTERISTIC]      =
-    {{ESP_GATT_AUTO_RSP}, {ESP_UUID_LEN_16, (uint8_t *)&characteristic_declaration_uuid, ESP_GATT_PERM_READ,
-      sizeof(characteristic_property_read), sizeof(characteristic_property_read), (uint8_t*)&characteristic_property_read}},
+    [IDX_TEMPERATURE_CHARACT] =
+    {{ESP_GATT_AUTO_RSP}, {ESP_UUID_LEN_16, (uint8_t *)&charact_declaration_uuid, ESP_GATT_PERM_READ,
+      sizeof(charact_property_read), sizeof(charact_property_read), (uint8_t*)&charact_property_read}},
 
     /* Characteristic Value */
-    [IDX_TEMPERATURE_CHARACTERISTIC_VALUE]  =
-    {{ESP_GATT_AUTO_RSP}, {ESP_UUID_LEN_16, (uint8_t *)&GATTS_TEMPERATURE_CHARACTERISTIC_UUID, ESP_GATT_PERM_READ | ESP_GATT_PERM_WRITE,
-      sizeof(temperature_characteristic_value), sizeof(temperature_characteristic_value), (uint8_t*)temperature_characteristic_value}},
+    [IDX_TEMPERATURE_CHARACT_VALUE] =
+    {{ESP_GATT_AUTO_RSP}, {ESP_UUID_LEN_16, (uint8_t *)&GATTS_TEMPERATURE_CHARACT_UUID, ESP_GATT_PERM_READ | ESP_GATT_PERM_WRITE,
+      sizeof(temperature_charact_value), sizeof(temperature_charact_value), (uint8_t*)temperature_charact_value}},
 };
-
 // clang-format on
+
+//==================================================================================================
+// GLOBAL FUNCTIONS
+//==================================================================================================
+
+void app_main(void)
+{
+    esp_err_t ret;
+
+    /* Initialize NVS. */
+    ret = nvs_flash_init();
+    if (ret == ESP_ERR_NVS_NO_FREE_PAGES || ret == ESP_ERR_NVS_NEW_VERSION_FOUND)
+    {
+        ESP_ERROR_CHECK(nvs_flash_erase());
+        ret = nvs_flash_init();
+    }
+    ESP_ERROR_CHECK(ret);
+
+    ESP_ERROR_CHECK(esp_bt_controller_mem_release(ESP_BT_MODE_CLASSIC_BT));
+
+    esp_bt_controller_config_t bt_cfg = BT_CONTROLLER_INIT_CONFIG_DEFAULT();
+    ret = esp_bt_controller_init(&bt_cfg);
+    if (ret)
+    {
+        ESP_LOGE(GATTS_TABLE_TAG, "%s enable controller failed: %s", __func__, esp_err_to_name(ret));
+        return;
+    }
+
+    ret = esp_bt_controller_enable(ESP_BT_MODE_BLE);
+    if (ret)
+    {
+        ESP_LOGE(GATTS_TABLE_TAG, "%s enable controller failed: %s", __func__, esp_err_to_name(ret));
+        return;
+    }
+
+    ret = esp_bluedroid_init();
+    if (ret)
+    {
+        ESP_LOGE(GATTS_TABLE_TAG, "%s init bluetooth failed: %s", __func__, esp_err_to_name(ret));
+        return;
+    }
+
+    ret = esp_bluedroid_enable();
+    if (ret)
+    {
+        ESP_LOGE(GATTS_TABLE_TAG, "%s enable bluetooth failed: %s", __func__, esp_err_to_name(ret));
+        return;
+    }
+
+    ret = esp_ble_gatts_register_callback(gatts_event_handler);
+    if (ret)
+    {
+        ESP_LOGE(GATTS_TABLE_TAG, "gatts register error, error code = %x", ret);
+        return;
+    }
+
+    ret = esp_ble_gap_register_callback(gap_event_handler);
+    if (ret)
+    {
+        ESP_LOGE(GATTS_TABLE_TAG, "gap register error, error code = %x", ret);
+        return;
+    }
+
+    ret = esp_ble_gatts_app_register(ESP_APP_ID);
+    if (ret)
+    {
+        ESP_LOGE(GATTS_TABLE_TAG, "gatts app register error, error code = %x", ret);
+        return;
+    }
+
+    esp_err_t local_mtu_ret = esp_ble_gatt_set_local_mtu(500);
+    if (local_mtu_ret)
+    {
+        ESP_LOGE(GATTS_TABLE_TAG, "set local  MTU failed, error code = %x", local_mtu_ret);
+    }
+}
+
+//==================================================================================================
+// STATIC FUNCTIONS
+//==================================================================================================
 
 static void gap_event_handler(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param_t *param)
 {
@@ -289,7 +404,6 @@ static void gatts_profile_event_handler(esp_gatts_cb_event_t event, esp_gatt_if_
 
 static void gatts_event_handler(esp_gatts_cb_event_t event, esp_gatt_if_t gatts_if, esp_ble_gatts_cb_param_t *param)
 {
-
     /* If event is register event, store the gatts_if for each profile */
     if (event == ESP_GATTS_REG_EVT)
     {
@@ -303,6 +417,7 @@ static void gatts_event_handler(esp_gatts_cb_event_t event, esp_gatt_if_t gatts_
             return;
         }
     }
+    // TODO LORIS: why do we need this here?
     do
     {
         int idx;
@@ -318,76 +433,4 @@ static void gatts_event_handler(esp_gatts_cb_event_t event, esp_gatt_if_t gatts_
             }
         }
     } while (0);
-}
-
-void app_main(void)
-{
-    esp_err_t ret;
-
-    /* Initialize NVS. */
-    ret = nvs_flash_init();
-    if (ret == ESP_ERR_NVS_NO_FREE_PAGES || ret == ESP_ERR_NVS_NEW_VERSION_FOUND)
-    {
-        ESP_ERROR_CHECK(nvs_flash_erase());
-        ret = nvs_flash_init();
-    }
-    ESP_ERROR_CHECK(ret);
-
-    ESP_ERROR_CHECK(esp_bt_controller_mem_release(ESP_BT_MODE_CLASSIC_BT));
-
-    esp_bt_controller_config_t bt_cfg = BT_CONTROLLER_INIT_CONFIG_DEFAULT();
-    ret = esp_bt_controller_init(&bt_cfg);
-    if (ret)
-    {
-        ESP_LOGE(GATTS_TABLE_TAG, "%s enable controller failed: %s", __func__, esp_err_to_name(ret));
-        return;
-    }
-
-    ret = esp_bt_controller_enable(ESP_BT_MODE_BLE);
-    if (ret)
-    {
-        ESP_LOGE(GATTS_TABLE_TAG, "%s enable controller failed: %s", __func__, esp_err_to_name(ret));
-        return;
-    }
-
-    ret = esp_bluedroid_init();
-    if (ret)
-    {
-        ESP_LOGE(GATTS_TABLE_TAG, "%s init bluetooth failed: %s", __func__, esp_err_to_name(ret));
-        return;
-    }
-
-    ret = esp_bluedroid_enable();
-    if (ret)
-    {
-        ESP_LOGE(GATTS_TABLE_TAG, "%s enable bluetooth failed: %s", __func__, esp_err_to_name(ret));
-        return;
-    }
-
-    ret = esp_ble_gatts_register_callback(gatts_event_handler);
-    if (ret)
-    {
-        ESP_LOGE(GATTS_TABLE_TAG, "gatts register error, error code = %x", ret);
-        return;
-    }
-
-    ret = esp_ble_gap_register_callback(gap_event_handler);
-    if (ret)
-    {
-        ESP_LOGE(GATTS_TABLE_TAG, "gap register error, error code = %x", ret);
-        return;
-    }
-
-    ret = esp_ble_gatts_app_register(ESP_APP_ID);
-    if (ret)
-    {
-        ESP_LOGE(GATTS_TABLE_TAG, "gatts app register error, error code = %x", ret);
-        return;
-    }
-
-    esp_err_t local_mtu_ret = esp_ble_gatt_set_local_mtu(500);
-    if (local_mtu_ret)
-    {
-        ESP_LOGE(GATTS_TABLE_TAG, "set local  MTU failed, error code = %x", local_mtu_ret);
-    }
 }
