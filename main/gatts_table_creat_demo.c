@@ -41,12 +41,6 @@
 #define SAMPLE_DEVICE_NAME          "ESP_GATTS_DEMO" // TODO LORIS: give your app's name
 #define SERVICE_INSTANCE_ID         0
 
-/* The max length of characteristic value. When the GATT client performs a write or prepare write operation,
-*  the data length must be less than GATTS_DEMO_CHAR_VAL_LEN_MAX.
-*/
-#define GATTS_DEMO_CHAR_VAL_LEN_MAX 500
-#define CHAR_DECLARATION_SIZE       (sizeof(uint8_t))
-
 #define ADV_CONFIG_FLAG             (1 << 0)
 #define SCAN_RSP_CONFIG_FLAG        (1 << 1)
 
@@ -135,12 +129,12 @@ static const esp_gatts_attr_db_t gatt_db[IDX_COUNT] =
     /* Characteristic Declaration */
     [IDX_TEMPERATURE_CHARACTERISTIC]      =
     {{ESP_GATT_AUTO_RSP}, {ESP_UUID_LEN_16, (uint8_t *)&characteristic_declaration_uuid, ESP_GATT_PERM_READ,
-      CHAR_DECLARATION_SIZE, CHAR_DECLARATION_SIZE, (uint8_t *)&characteristic_property_read}},
+      sizeof(characteristic_property_read), sizeof(characteristic_property_read), (uint8_t*)&characteristic_property_read}},
 
     /* Characteristic Value */
     [IDX_TEMPERATURE_CHARACTERISTIC_VALUE]  =
     {{ESP_GATT_AUTO_RSP}, {ESP_UUID_LEN_16, (uint8_t *)&GATTS_TEMPERATURE_CHARACTERISTIC_UUID, ESP_GATT_PERM_READ | ESP_GATT_PERM_WRITE,
-      GATTS_DEMO_CHAR_VAL_LEN_MAX, sizeof(temperature_characteristic_value), (uint8_t *)temperature_characteristic_value}},
+      sizeof(temperature_characteristic_value), sizeof(temperature_characteristic_value), (uint8_t*)temperature_characteristic_value}},
 };
 
 // clang-format on
