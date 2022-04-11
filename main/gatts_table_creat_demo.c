@@ -86,9 +86,6 @@ static void gatts_event_handler(esp_gatts_cb_event_t event, esp_gatt_if_t gatts_
  * Advertising
  */
 
-// TODO LORIS: give it tighter scope
-static uint16_t environmental_sensing_handle_table[IDX_COUNT];
-
 // clang-format off
 static uint8_t adv_service_uuid[16] = {
     /* LSB <--------------------------------------------------------------------------------> MSB */
@@ -367,6 +364,7 @@ static void gatts_profile_event_handler(esp_gatts_cb_event_t event, esp_gatt_if_
         {
             ESP_LOGI(GATTS_TABLE_TAG, "create attribute table successfully, the number handle = %d\n",
                      param->add_attr_tab.num_handle);
+            uint16_t environmental_sensing_handle_table[IDX_COUNT];
             memcpy(environmental_sensing_handle_table, param->add_attr_tab.handles,
                    sizeof(environmental_sensing_handle_table));
             esp_ble_gatts_start_service(environmental_sensing_handle_table[IDX_SERVICE]);
