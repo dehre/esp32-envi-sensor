@@ -37,9 +37,9 @@
 
 #define PROFILE_NUM                 1
 #define PROFILE_APP_IDX             0
-#define ESP_APP_ID                  0x55 // NOTE LORIS: user defined
+#define ESP_APP_ID                  0x55 // user defined
 #define SAMPLE_DEVICE_NAME          "ESP_GATTS_DEMO" // TODO LORIS: give your app's name
-#define SVC_INST_ID                 0
+#define SERVICE_INSTANCE_ID         0
 
 /* The max length of characteristic value. When the GATT client performs a write or prepare write operation,
 *  the data length must be less than GATTS_DEMO_CHAR_VAL_LEN_MAX.
@@ -54,8 +54,7 @@
 
 static uint8_t adv_config_done       = 0;
 
-// TODO LORIS: rename
-uint16_t heart_rate_handle_table[HRS_IDX_NB];
+uint16_t environmental_sensing_handle_table[IDX_COUNT];
 
 // TODO LORIS: do I need these, or are just for writing from client to server?
 typedef struct {
@@ -116,8 +115,7 @@ static void gatts_profile_event_handler(esp_gatts_cb_event_t event,
 					esp_gatt_if_t gatts_if, esp_ble_gatts_cb_param_t *param);
 
 /* One gatt-based profile one app_id and one gatts_if, this array will store the gatts_if returned by ESP_GATTS_REG_EVT */
-// TODO LORIS: rename
-static struct gatts_profile_inst heart_rate_profile_tab[PROFILE_NUM] = {
+static struct gatts_profile_inst environmental_sensing_profile_tab[PROFILE_NUM] = {
     [PROFILE_APP_IDX] = {
         .gatts_cb = gatts_profile_event_handler,
         .gatts_if = ESP_GATT_IF_NONE,       /* Not get the gatt_if, so initial is ESP_GATT_IF_NONE */
@@ -125,38 +123,36 @@ static struct gatts_profile_inst heart_rate_profile_tab[PROFILE_NUM] = {
 };
 
 /* Service */
-// TODO LORIS: give appropriate services and characteristics, rename #defines
-static const uint16_t GATTS_SERVICE_UUID_TEST      = 0x181A; // NOTE LORIS: GATT Environmental Sensing Service
-static const uint16_t GATTS_CHAR_UUID_TEST_B       = 0x2A6E; // NOTE LORIS: GATT Temperature Characteristic
+static const uint16_t GATTS_ENVIRONMENTAL_SENSING_SERVICE_UUID = 0x181A;
+static const uint16_t GATTS_TEMPERATURE_CHARACTERISTIC_UUID    = 0x2A6E;
 
-static const uint16_t primary_service_uuid         = ESP_GATT_UUID_PRI_SERVICE;
-static const uint16_t character_declaration_uuid   = ESP_GATT_UUID_CHAR_DECLARE;
-static const uint8_t characteristic_property_read  = ESP_GATT_CHAR_PROP_BIT_READ;
+static const uint16_t primary_service_uuid            = ESP_GATT_UUID_PRI_SERVICE;
+static const uint16_t characteristic_declaration_uuid = ESP_GATT_UUID_CHAR_DECLARE;
+static const uint8_t characteristic_property_read     = ESP_GATT_CHAR_PROP_BIT_READ;
 
 // TODO LORIS: how to store a int16_t as an uint8_t[2]
 static const uint8_t temperature_characteristic_value[2] = {0x17, 0x50};
 
 
 /* Full Database Description - Used to add attributes into the database */
-static const esp_gatts_attr_db_t gatt_db[HRS_IDX_NB] =
+static const esp_gatts_attr_db_t gatt_db[IDX_COUNT] =
 {
     // Service Declaration
-    [IDX_SVC]        =
+    [IDX_SERVICE]        =
     {{ESP_GATT_AUTO_RSP}, {ESP_UUID_LEN_16, (uint8_t *)&primary_service_uuid, ESP_GATT_PERM_READ,
-      sizeof(uint16_t), sizeof(GATTS_SERVICE_UUID_TEST), (uint8_t *)&GATTS_SERVICE_UUID_TEST}},
+      sizeof(uint16_t), sizeof(GATTS_ENVIRONMENTAL_SENSING_SERVICE_UUID), (uint8_t *)&GATTS_ENVIRONMENTAL_SENSING_SERVICE_UUID}},
 
     /* Characteristic Declaration */
-    [IDX_CHAR_B]      =
-    {{ESP_GATT_AUTO_RSP}, {ESP_UUID_LEN_16, (uint8_t *)&character_declaration_uuid, ESP_GATT_PERM_READ,
+    [IDX_TEMPERATURE_CHARACTERISTIC]      =
+    {{ESP_GATT_AUTO_RSP}, {ESP_UUID_LEN_16, (uint8_t *)&characteristic_declaration_uuid, ESP_GATT_PERM_READ,
       CHAR_DECLARATION_SIZE, CHAR_DECLARATION_SIZE, (uint8_t *)&characteristic_property_read}},
 
     /* Characteristic Value */
-    [IDX_CHAR_VAL_B]  =
-    {{ESP_GATT_AUTO_RSP}, {ESP_UUID_LEN_16, (uint8_t *)&GATTS_CHAR_UUID_TEST_B, ESP_GATT_PERM_READ | ESP_GATT_PERM_WRITE,
+    [IDX_TEMPERATURE_CHARACTERISTIC_VALUE]  =
+    {{ESP_GATT_AUTO_RSP}, {ESP_UUID_LEN_16, (uint8_t *)&GATTS_TEMPERATURE_CHARACTERISTIC_UUID, ESP_GATT_PERM_READ | ESP_GATT_PERM_WRITE,
       GATTS_DEMO_CHAR_VAL_LEN_MAX, sizeof(temperature_characteristic_value), (uint8_t *)temperature_characteristic_value}},
 };
 
-// NOTE LORIS: from here on, nothing should be changed
 // clang-format on
 
 static void gap_event_handler(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param_t *param)
@@ -304,7 +300,7 @@ static void gatts_profile_event_handler(esp_gatts_cb_event_t event, esp_gatt_if_
             ESP_LOGE(GATTS_TABLE_TAG, "config adv data failed, error code = %x", ret);
         }
         adv_config_done |= ADV_CONFIG_FLAG;
-        esp_err_t create_attr_ret = esp_ble_gatts_create_attr_tab(gatt_db, gatts_if, HRS_IDX_NB, SVC_INST_ID);
+        esp_err_t create_attr_ret = esp_ble_gatts_create_attr_tab(gatt_db, gatts_if, IDX_COUNT, SERVICE_INSTANCE_ID);
         if (create_attr_ret)
         {
             ESP_LOGE(GATTS_TABLE_TAG, "create attr table failed, error code = %x", create_attr_ret);
@@ -374,18 +370,19 @@ static void gatts_profile_event_handler(esp_gatts_cb_event_t event, esp_gatt_if_
         {
             ESP_LOGE(GATTS_TABLE_TAG, "create attribute table failed, error code=0x%x", param->add_attr_tab.status);
         }
-        else if (param->add_attr_tab.num_handle != HRS_IDX_NB)
+        else if (param->add_attr_tab.num_handle != IDX_COUNT)
         {
             ESP_LOGE(GATTS_TABLE_TAG, "create attribute table abnormally, num_handle (%d) \
-                        doesn't equal to HRS_IDX_NB(%d)",
-                     param->add_attr_tab.num_handle, HRS_IDX_NB);
+                        doesn't equal to IDX_COUNT(%d)",
+                     param->add_attr_tab.num_handle, IDX_COUNT);
         }
         else
         {
             ESP_LOGI(GATTS_TABLE_TAG, "create attribute table successfully, the number handle = %d\n",
                      param->add_attr_tab.num_handle);
-            memcpy(heart_rate_handle_table, param->add_attr_tab.handles, sizeof(heart_rate_handle_table));
-            esp_ble_gatts_start_service(heart_rate_handle_table[IDX_SVC]);
+            memcpy(environmental_sensing_handle_table, param->add_attr_tab.handles,
+                   sizeof(environmental_sensing_handle_table));
+            esp_ble_gatts_start_service(environmental_sensing_handle_table[IDX_SERVICE]);
         }
         break;
     }
@@ -410,7 +407,7 @@ static void gatts_event_handler(esp_gatts_cb_event_t event, esp_gatt_if_t gatts_
     {
         if (param->reg.status == ESP_GATT_OK)
         {
-            heart_rate_profile_tab[PROFILE_APP_IDX].gatts_if = gatts_if;
+            environmental_sensing_profile_tab[PROFILE_APP_IDX].gatts_if = gatts_if;
         }
         else
         {
@@ -424,11 +421,11 @@ static void gatts_event_handler(esp_gatts_cb_event_t event, esp_gatt_if_t gatts_
         for (idx = 0; idx < PROFILE_NUM; idx++)
         {
             /* ESP_GATT_IF_NONE, not specify a certain gatt_if, need to call every profile cb function */
-            if (gatts_if == ESP_GATT_IF_NONE || gatts_if == heart_rate_profile_tab[idx].gatts_if)
+            if (gatts_if == ESP_GATT_IF_NONE || gatts_if == environmental_sensing_profile_tab[idx].gatts_if)
             {
-                if (heart_rate_profile_tab[idx].gatts_cb)
+                if (environmental_sensing_profile_tab[idx].gatts_cb)
                 {
-                    heart_rate_profile_tab[idx].gatts_cb(event, gatts_if, param);
+                    environmental_sensing_profile_tab[idx].gatts_cb(event, gatts_if, param);
                 }
             }
         }

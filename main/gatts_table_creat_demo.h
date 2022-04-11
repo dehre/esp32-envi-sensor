@@ -13,11 +13,10 @@
 /* Attributes State Machine */
 enum
 {
-    IDX_SVC,
+    IDX_SERVICE,
 
-    IDX_CHAR_B,
-    IDX_CHAR_VAL_B,
+    IDX_TEMPERATURE_CHARACTERISTIC,
+    IDX_TEMPERATURE_CHARACTERISTIC_VALUE,
 
-    // TODO LORIS: rename, all of them
-    HRS_IDX_NB,
+    IDX_COUNT,
 };
