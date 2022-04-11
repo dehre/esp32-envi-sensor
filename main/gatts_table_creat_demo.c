@@ -65,11 +65,10 @@ typedef struct {
 
 static prepare_type_env_t prepare_write_env;
 
-// TODO LORIS: what's this?
-static uint8_t service_uuid[16] = {
+static uint8_t adv_service_uuid[16] = {
     /* LSB <--------------------------------------------------------------------------------> MSB */
-    //first uuid, 16bit, [12],[13] is the value
-    0xfb, 0x34, 0x9b, 0x5f, 0x80, 0x00, 0x00, 0x80, 0x00, 0x10, 0x00, 0x00, 0xFF, 0x00, 0x00, 0x00,
+    // first uuid, 16bit, [12],[13] is the advertised service (0x181A - Environmental Sensing Service)
+    0xfb, 0x34, 0x9b, 0x5f, 0x80, 0x00, 0x00, 0x80, 0x00, 0x10, 0x00, 0x00, 0x1A, 0x18, 0x00, 0x00,
 };
 
 /* The length of adv data must be less than 31 bytes */
@@ -77,15 +76,15 @@ static esp_ble_adv_data_t adv_data = {
     .set_scan_rsp        = false,
     .include_name        = true,
     .include_txpower     = true,
-    .min_interval        = 0x0006, //slave connection min interval, Time = min_interval * 1.25 msec
-    .max_interval        = 0x0010, //slave connection max interval, Time = max_interval * 1.25 msec
+    .min_interval        = 0x0006, // slave connection min interval, Time = min_interval * 1.25 msec
+    .max_interval        = 0x0010, // slave connection max interval, Time = max_interval * 1.25 msec
     .appearance          = 0x00,
     .manufacturer_len    = 0,
     .p_manufacturer_data = NULL,
     .service_data_len    = 0,
     .p_service_data      = NULL,
-    .service_uuid_len    = sizeof(service_uuid),
-    .p_service_uuid      = service_uuid,
+    .service_uuid_len    = sizeof(adv_service_uuid),
+    .p_service_uuid      = adv_service_uuid,
     .flag = (ESP_BLE_ADV_FLAG_GEN_DISC | ESP_BLE_ADV_FLAG_BREDR_NOT_SPT),
 };
 
