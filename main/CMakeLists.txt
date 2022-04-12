@@ -1,2 +1,3 @@
-idf_component_register(SRCS "gatts_table_creat_demo.c"
-                    INCLUDE_DIRS ".")
+set(c_SRCS main.c ble_handler.c)
+
+idf_component_register(SRCS ${c_SRCS} INCLUDE_DIRS include)
