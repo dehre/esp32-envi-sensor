@@ -239,6 +239,12 @@ esp_err_t ble_handler_init(void)
     return ESP_OK;
 }
 
+esp_err_t ble_handler_write_temperature(float temperature)
+{
+    printf("write temperature %f\n", temperature);
+    return ESP_OK;
+}
+
 //==================================================================================================
 // STATIC FUNCTIONS
 //==================================================================================================
