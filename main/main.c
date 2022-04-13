@@ -19,7 +19,7 @@
 
 #define MAIN_TASK_PRIORITY 1                          // for reference
 #define MAX_TASK_PRIORITY (configMAX_PRIORITIES - 1U) // for reference
-#define PERIODIC_TASK_PRIORITY 2
+#define READ_SENSOR_TASK_PRIORITY 2
 #define UPDATE_MONITOR_TASK_PRIORITY 2
 
 //==================================================================================================
@@ -30,7 +30,7 @@
 // STATIC PROTOTYPES
 //==================================================================================================
 
-static void periodic_task(void *param);
+static void read_sensor_task(void *param);
 
 static void update_monitor_task(void *param);
 
@@ -52,7 +52,8 @@ void app_main(void)
     monitor_queue = xQueueCreate(1, sizeof(float));
 
     TaskHandle_t periodic_task_handle = NULL;
-    xTaskCreate(&periodic_task, "periodic_task", TASK_STACK_DEPTH, NULL, PERIODIC_TASK_PRIORITY, &periodic_task_handle);
+    xTaskCreate(&read_sensor_task, "read_sensor_task", TASK_STACK_DEPTH, NULL, READ_SENSOR_TASK_PRIORITY,
+                &periodic_task_handle);
     configASSERT(periodic_task_handle);
 
     TaskHandle_t update_monitor_task_handle = NULL;
@@ -67,7 +68,7 @@ void app_main(void)
 // STATIC FUNCTIONS
 //==================================================================================================
 
-static void periodic_task(void *param)
+static void read_sensor_task(void *param)
 {
     (void)param;
     const TickType_t frequency = 1000 / portTICK_PERIOD_MS;
