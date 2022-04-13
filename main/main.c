@@ -26,6 +26,12 @@
 // ENUMS - STRUCTS - TYPEDEFS
 //==================================================================================================
 
+typedef struct
+{
+    float temperature;
+    float humidity;
+} sensor_reading_t;
+
 //==================================================================================================
 // STATIC PROTOTYPES
 //==================================================================================================
@@ -39,7 +45,7 @@ static void update_monitor_task(void *param);
 //==================================================================================================
 
 // Pass readings from the sensor to the onboard monitor
-static QueueHandle_t monitor_queue = NULL;
+static QueueHandle_t mailbox_monitor = NULL;
 
 //==================================================================================================
 // GLOBAL FUNCTIONS
@@ -49,7 +55,7 @@ void app_main(void)
 {
     ESP_ERROR_CHECK(ble_handler_init());
 
-    monitor_queue = xQueueCreate(1, sizeof(float));
+    mailbox_monitor = xQueueCreate(1, sizeof(sensor_reading_t));
 
     TaskHandle_t periodic_task_handle = NULL;
     xTaskCreate(&read_sensor_task, "read_sensor_task", TASK_STACK_DEPTH, NULL, READ_SENSOR_TASK_PRIORITY,
@@ -77,11 +83,11 @@ static void read_sensor_task(void *param)
     {
         vTaskDelayUntil(&lastWakeTime, frequency);
 
-        float sensor_reading = (float)i;
-        if (xQueueSend(monitor_queue, (void *)&sensor_reading, portMAX_DELAY) != pdPASS)
+        sensor_reading_t reading = {.temperature = (float)i, .humidity = (i / (float)2.0)};
+        if (xQueueSend(mailbox_monitor, (void *)&reading, portMAX_DELAY) != pdPASS)
         {
-            ESP_LOGW(MAIN_TAG, "Last reading not received from monitor, overwriting with new value");
-            configASSERT(xQueueOverwrite(monitor_queue, (void *)&sensor_reading));
+            ESP_LOGW(MAIN_TAG, "Last sensor reading not received from monitor, overwriting with new value");
+            configASSERT(xQueueOverwrite(mailbox_monitor, (void *)&reading));
         }
     }
 }
@@ -91,10 +97,10 @@ static void update_monitor_task(void *param)
     (void)param;
     while (1)
     {
-        float sensor_reading;
-        if (xQueueReceive(monitor_queue, &sensor_reading, portMAX_DELAY))
+        sensor_reading_t reading;
+        if (xQueueReceive(mailbox_monitor, &reading, portMAX_DELAY))
         {
-            printf("MONITOR -- temperature: %f\n", sensor_reading);
+            printf("MONITOR -- temperature: %f humidity: %f\n", reading.temperature, reading.humidity);
         }
     }
 }
