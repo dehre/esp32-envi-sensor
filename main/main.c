@@ -1,9 +1,17 @@
+//==================================================================================================
+// INCLUDES
+//==================================================================================================
+
 #include "ble_handler.h"
 #include "esp_err.h"
 #include "esp_log.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/queue.h"
 #include "freertos/task.h"
+
+//==================================================================================================
+// DEFINES - MACROS
+//==================================================================================================
 
 #define MAIN_TAG "MAIN"
 
@@ -14,10 +22,51 @@
 #define PERIODIC_TASK_PRIORITY 2
 #define UPDATE_MONITOR_TASK_PRIORITY 2
 
+//==================================================================================================
+// ENUMS - STRUCTS - TYPEDEFS
+//==================================================================================================
+
+//==================================================================================================
+// STATIC PROTOTYPES
+//==================================================================================================
+
+static void periodic_task(void *param);
+
+static void update_monitor_task(void *param);
+
+//==================================================================================================
+// STATIC VARIABLES
+//==================================================================================================
+
 // Pass readings from the sensor to the onboard monitor
 static QueueHandle_t monitor_queue = NULL;
 
-// read sensor
+//==================================================================================================
+// GLOBAL FUNCTIONS
+//==================================================================================================
+
+void app_main(void)
+{
+    ESP_ERROR_CHECK(ble_handler_init());
+
+    monitor_queue = xQueueCreate(1, sizeof(float));
+
+    TaskHandle_t periodic_task_handle = NULL;
+    xTaskCreate(&periodic_task, "periodic_task", TASK_STACK_DEPTH, NULL, PERIODIC_TASK_PRIORITY, &periodic_task_handle);
+    configASSERT(periodic_task_handle);
+
+    TaskHandle_t update_monitor_task_handle = NULL;
+    xTaskCreate(&update_monitor_task, "update_monitor_task", TASK_STACK_DEPTH, NULL, UPDATE_MONITOR_TASK_PRIORITY,
+                &update_monitor_task_handle);
+    configASSERT(update_monitor_task_handle);
+
+    vTaskDelete(NULL);
+}
+
+//==================================================================================================
+// STATIC FUNCTIONS
+//==================================================================================================
+
 static void periodic_task(void *param)
 {
     (void)param;
@@ -47,22 +96,4 @@ static void update_monitor_task(void *param)
             printf("MONITOR -- temperature: %f\n", sensor_reading);
         }
     }
-}
-
-void app_main(void)
-{
-    ESP_ERROR_CHECK(ble_handler_init());
-
-    monitor_queue = xQueueCreate(1, sizeof(float));
-
-    TaskHandle_t periodic_task_handle = NULL;
-    xTaskCreate(&periodic_task, "periodic_task", TASK_STACK_DEPTH, NULL, PERIODIC_TASK_PRIORITY, &periodic_task_handle);
-    configASSERT(periodic_task_handle);
-
-    TaskHandle_t update_monitor_task_handle = NULL;
-    xTaskCreate(&update_monitor_task, "update_monitor_task", TASK_STACK_DEPTH, NULL, UPDATE_MONITOR_TASK_PRIORITY,
-                &update_monitor_task_handle);
-    configASSERT(update_monitor_task_handle);
-
-    vTaskDelete(NULL);
 }
