@@ -2,7 +2,7 @@
 // INCLUDES
 //==================================================================================================
 
-#include "ble_handler.h"
+#include "ble_manager.h"
 
 #include "esp_bt.h"
 #include "esp_log.h"
@@ -165,7 +165,7 @@ static const esp_gatts_attr_db_t gatt_db[IDX_COUNT] =
 // GLOBAL FUNCTIONS
 //==================================================================================================
 
-esp_err_t ble_handler_init(void)
+esp_err_t ble_manager_init(void)
 {
     esp_err_t ret;
 
@@ -239,7 +239,7 @@ esp_err_t ble_handler_init(void)
     return ESP_OK;
 }
 
-esp_err_t ble_handler_write_temperature(float temperature)
+esp_err_t ble_manager_write_temperature(float temperature)
 {
     printf("write temperature %f\n", temperature);
     return ESP_OK;

@@ -2,7 +2,7 @@
 // INCLUDES
 //==================================================================================================
 
-#include "ble_handler.h"
+#include "ble_manager.h"
 #include "esp_err.h"
 #include "esp_log.h"
 #include "freertos/FreeRTOS.h"
@@ -59,7 +59,7 @@ static QueueHandle_t mailbox_ble = NULL;
 
 void app_main(void)
 {
-    ESP_ERROR_CHECK(ble_handler_init());
+    ESP_ERROR_CHECK(ble_manager_init());
 
     mailbox_monitor = xQueueCreate(1, sizeof(sensor_reading_t));
     mailbox_ble = xQueueCreate(1, sizeof(sensor_reading_t));
