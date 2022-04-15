@@ -23,7 +23,7 @@
 //==================================================================================================
 
 #define BLE_DEVICE_NAME "Envi Sensor" // device name shown when advertising
-#define BLE_HANDLER_TAG "BLE_HANDLER"
+#define BLE_MANAGER_TAG "BLE_MANAGER"
 
 #define ESP_APP_ID 0x55 // random value
 #define PROFILE_NUM 1
@@ -184,56 +184,56 @@ esp_err_t ble_manager_init(void)
     ret = esp_bt_controller_init(&bt_cfg);
     if (ret)
     {
-        ESP_LOGE(BLE_HANDLER_TAG, "%s enable controller failed: %s", __func__, esp_err_to_name(ret));
+        ESP_LOGE(BLE_MANAGER_TAG, "%s enable controller failed: %s", __func__, esp_err_to_name(ret));
         return ret;
     }
 
     ret = esp_bt_controller_enable(ESP_BT_MODE_BLE);
     if (ret)
     {
-        ESP_LOGE(BLE_HANDLER_TAG, "%s enable controller failed: %s", __func__, esp_err_to_name(ret));
+        ESP_LOGE(BLE_MANAGER_TAG, "%s enable controller failed: %s", __func__, esp_err_to_name(ret));
         return ret;
     }
 
     ret = esp_bluedroid_init();
     if (ret)
     {
-        ESP_LOGE(BLE_HANDLER_TAG, "%s init bluetooth failed: %s", __func__, esp_err_to_name(ret));
+        ESP_LOGE(BLE_MANAGER_TAG, "%s init bluetooth failed: %s", __func__, esp_err_to_name(ret));
         return ret;
     }
 
     ret = esp_bluedroid_enable();
     if (ret)
     {
-        ESP_LOGE(BLE_HANDLER_TAG, "%s enable bluetooth failed: %s", __func__, esp_err_to_name(ret));
+        ESP_LOGE(BLE_MANAGER_TAG, "%s enable bluetooth failed: %s", __func__, esp_err_to_name(ret));
         return ret;
     }
 
     ret = esp_ble_gatts_register_callback(gatts_event_handler);
     if (ret)
     {
-        ESP_LOGE(BLE_HANDLER_TAG, "gatts register error, error code = %x", ret);
+        ESP_LOGE(BLE_MANAGER_TAG, "gatts register error, error code = %x", ret);
         return ret;
     }
 
     ret = esp_ble_gap_register_callback(gap_event_handler);
     if (ret)
     {
-        ESP_LOGE(BLE_HANDLER_TAG, "gap register error, error code = %x", ret);
+        ESP_LOGE(BLE_MANAGER_TAG, "gap register error, error code = %x", ret);
         return ret;
     }
 
     ret = esp_ble_gatts_app_register(ESP_APP_ID);
     if (ret)
     {
-        ESP_LOGE(BLE_HANDLER_TAG, "gatts app register error, error code = %x", ret);
+        ESP_LOGE(BLE_MANAGER_TAG, "gatts app register error, error code = %x", ret);
         return ret;
     }
 
     ret = esp_ble_gatt_set_local_mtu(500);
     if (ret)
     {
-        ESP_LOGE(BLE_HANDLER_TAG, "set local  MTU failed, error code = %x", ret);
+        ESP_LOGE(BLE_MANAGER_TAG, "set local  MTU failed, error code = %x", ret);
         return ret;
     }
     return ESP_OK;
@@ -254,13 +254,14 @@ static void gatts_event_handler(esp_gatts_cb_event_t event, esp_gatt_if_t gatts_
     /* If event is register event, store the gatts_if for each profile */
     if (event == ESP_GATTS_REG_EVT)
     {
+        ESP_LOGI(BLE_MANAGER_TAG, "ESP_GATTS_REG_EVT");
         if (param->reg.status == ESP_GATT_OK)
         {
             environmental_sensing_profile_tab[PROFILE_APP_IDX].gatts_if = gatts_if;
         }
         else
         {
-            ESP_LOGE(BLE_HANDLER_TAG, "reg app failed, app_id %04x, status %d", param->reg.app_id, param->reg.status);
+            ESP_LOGE(BLE_MANAGER_TAG, "reg app failed, app_id %04x, status %d", param->reg.app_id, param->reg.status);
             return;
         }
     }
@@ -283,36 +284,37 @@ static void gatts_profile_event_handler(esp_gatts_cb_event_t event, esp_gatt_if_
     switch (event)
     {
     case ESP_GATTS_REG_EVT: {
+        ESP_LOGI(BLE_MANAGER_TAG, "ESP_GATTS_REG_EVT");
         esp_err_t set_dev_name_ret = esp_ble_gap_set_device_name(BLE_DEVICE_NAME);
         if (set_dev_name_ret)
         {
-            ESP_LOGE(BLE_HANDLER_TAG, "set device name failed, error code = %x", set_dev_name_ret);
+            ESP_LOGE(BLE_MANAGER_TAG, "set device name failed, error code = %x", set_dev_name_ret);
         }
         esp_err_t ret = esp_ble_gap_config_adv_data(&adv_data);
         if (ret)
         {
-            ESP_LOGE(BLE_HANDLER_TAG, "config adv data failed, error code = %x", ret);
+            ESP_LOGE(BLE_MANAGER_TAG, "config adv data failed, error code = %x", ret);
         }
         esp_err_t create_attr_ret = esp_ble_gatts_create_attr_tab(gatt_db, gatts_if, IDX_COUNT, SERVICE_INSTANCE_ID);
         if (create_attr_ret)
         {
-            ESP_LOGE(BLE_HANDLER_TAG, "create attr table failed, error code = %x", create_attr_ret);
+            ESP_LOGE(BLE_MANAGER_TAG, "create attr table failed, error code = %x", create_attr_ret);
         }
     }
     break;
     case ESP_GATTS_READ_EVT:
-        ESP_LOGI(BLE_HANDLER_TAG, "ESP_GATTS_READ_EVT");
+        ESP_LOGI(BLE_MANAGER_TAG, "ESP_GATTS_READ_EVT");
         break;
     case ESP_GATTS_MTU_EVT:
-        ESP_LOGI(BLE_HANDLER_TAG, "ESP_GATTS_MTU_EVT, MTU %d", param->mtu.mtu);
+        ESP_LOGI(BLE_MANAGER_TAG, "ESP_GATTS_MTU_EVT, MTU %d", param->mtu.mtu);
         break;
     case ESP_GATTS_START_EVT:
-        ESP_LOGI(BLE_HANDLER_TAG, "SERVICE_START_EVT, status %d, service_handle %d", param->start.status,
+        ESP_LOGI(BLE_MANAGER_TAG, "SERVICE_START_EVT, status %d, service_handle %d", param->start.status,
                  param->start.service_handle);
         break;
     case ESP_GATTS_CONNECT_EVT:
-        ESP_LOGI(BLE_HANDLER_TAG, "ESP_GATTS_CONNECT_EVT, conn_id = %d", param->connect.conn_id);
-        esp_log_buffer_hex(BLE_HANDLER_TAG, param->connect.remote_bda, 6);
+        ESP_LOGI(BLE_MANAGER_TAG, "ESP_GATTS_CONNECT_EVT, conn_id = %d", param->connect.conn_id);
+        esp_log_buffer_hex(BLE_MANAGER_TAG, param->connect.remote_bda, 6);
         esp_ble_conn_update_params_t conn_params = {0};
         memcpy(conn_params.bda, param->connect.remote_bda, sizeof(esp_bd_addr_t));
         /* For the iOS system, please refer to Apple official documents about the BLE connection parameters
@@ -325,23 +327,24 @@ static void gatts_profile_event_handler(esp_gatts_cb_event_t event, esp_gatt_if_
         esp_ble_gap_update_conn_params(&conn_params);
         break;
     case ESP_GATTS_DISCONNECT_EVT:
-        ESP_LOGI(BLE_HANDLER_TAG, "ESP_GATTS_DISCONNECT_EVT, reason = 0x%x", param->disconnect.reason);
+        ESP_LOGI(BLE_MANAGER_TAG, "ESP_GATTS_DISCONNECT_EVT, reason = 0x%x", param->disconnect.reason);
         esp_ble_gap_start_advertising(&adv_params);
         break;
     case ESP_GATTS_CREAT_ATTR_TAB_EVT: {
+        ESP_LOGI(BLE_MANAGER_TAG, "ESP_GATTS_CREAT_ATTR_TAB_EVT");
         if (param->add_attr_tab.status != ESP_GATT_OK)
         {
-            ESP_LOGE(BLE_HANDLER_TAG, "create attribute table failed, error code=0x%x", param->add_attr_tab.status);
+            ESP_LOGE(BLE_MANAGER_TAG, "create attribute table failed, error code=0x%x", param->add_attr_tab.status);
         }
         else if (param->add_attr_tab.num_handle != IDX_COUNT)
         {
-            ESP_LOGE(BLE_HANDLER_TAG, "create attribute table abnormally, num_handle (%d) \
+            ESP_LOGE(BLE_MANAGER_TAG, "create attribute table abnormally, num_handle (%d) \
                         doesn't equal to IDX_COUNT(%d)",
                      param->add_attr_tab.num_handle, IDX_COUNT);
         }
         else
         {
-            ESP_LOGI(BLE_HANDLER_TAG, "create attribute table successfully, the number handle = %d\n",
+            ESP_LOGI(BLE_MANAGER_TAG, "create attribute table successfully, the number handle = %d\n",
                      param->add_attr_tab.num_handle);
             uint16_t environmental_sensing_handle_table[IDX_COUNT];
             memcpy(environmental_sensing_handle_table, param->add_attr_tab.handles,
@@ -350,17 +353,6 @@ static void gatts_profile_event_handler(esp_gatts_cb_event_t event, esp_gatt_if_
         }
         break;
     }
-    case ESP_GATTS_WRITE_EVT:
-    case ESP_GATTS_EXEC_WRITE_EVT:
-    case ESP_GATTS_CONF_EVT:
-    case ESP_GATTS_STOP_EVT:
-    case ESP_GATTS_OPEN_EVT:
-    case ESP_GATTS_CANCEL_OPEN_EVT:
-    case ESP_GATTS_CLOSE_EVT:
-    case ESP_GATTS_LISTEN_EVT:
-    case ESP_GATTS_CONGEST_EVT:
-    case ESP_GATTS_UNREG_EVT:
-    case ESP_GATTS_DELETE_EVT:
     default:
         break;
     }
@@ -371,28 +363,24 @@ static void gap_event_handler(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param
     switch (event)
     {
     case ESP_GAP_BLE_ADV_DATA_SET_COMPLETE_EVT:
-    case ESP_GAP_BLE_SCAN_RSP_DATA_SET_COMPLETE_EVT:
+        ESP_LOGI(BLE_MANAGER_TAG, "ESP_GAP_BLE_ADV_DATA_SET_COMPLETE_EVT");
         esp_ble_gap_start_advertising(&adv_params);
         break;
     case ESP_GAP_BLE_ADV_START_COMPLETE_EVT:
-        /* advertising start complete event to indicate advertising start successfully or failed */
+        ESP_LOGI(BLE_MANAGER_TAG, "ESP_GAP_BLE_ADV_START_COMPLETE_EVT");
         if (param->adv_start_cmpl.status != ESP_BT_STATUS_SUCCESS)
         {
-            ESP_LOGE(BLE_HANDLER_TAG, "advertising start failed");
-        }
-        else
-        {
-            ESP_LOGI(BLE_HANDLER_TAG, "advertising start successfully");
+            ESP_LOGE(BLE_MANAGER_TAG, "advertising start failed");
         }
         break;
     case ESP_GAP_BLE_UPDATE_CONN_PARAMS_EVT:
-        ESP_LOGI(
-            BLE_HANDLER_TAG,
-            "update connection params status = %d, min_int = %d, max_int = %d,conn_int = %d,latency = %d, timeout = %d",
-            param->update_conn_params.status, param->update_conn_params.min_int, param->update_conn_params.max_int,
-            param->update_conn_params.conn_int, param->update_conn_params.latency, param->update_conn_params.timeout);
+        ESP_LOGI(BLE_MANAGER_TAG,
+                 "ESP_GAP_BLE_UPDATE_CONN_PARAMS_EVT, status = %d, min_int = %d, max_int = %d,conn_int = %d,latency = "
+                 "%d, timeout = %d",
+                 param->update_conn_params.status, param->update_conn_params.min_int, param->update_conn_params.max_int,
+                 param->update_conn_params.conn_int, param->update_conn_params.latency,
+                 param->update_conn_params.timeout);
         break;
-    case ESP_GAP_BLE_ADV_STOP_COMPLETE_EVT:
     default:
         break;
     }
