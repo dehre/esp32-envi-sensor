@@ -2,6 +2,10 @@
 // INCLUDES
 //==================================================================================================
 
+// TODO LORIS: macro for if(err) LOGE; return err
+
+// TODO LORIS: eventually different tag for ble_manager_events
+
 #include "ble_manager.h"
 
 #include "esp_bt.h"
@@ -255,15 +259,12 @@ static void gatts_event_handler(esp_gatts_cb_event_t event, esp_gatt_if_t gatts_
     if (event == ESP_GATTS_REG_EVT)
     {
         ESP_LOGI(BLE_MANAGER_TAG, "ESP_GATTS_REG_EVT");
-        if (param->reg.status == ESP_GATT_OK)
-        {
-            environmental_sensing_profile_tab[PROFILE_APP_IDX].gatts_if = gatts_if;
-        }
-        else
+        if (param->reg.status != ESP_GATT_OK)
         {
             ESP_LOGE(BLE_MANAGER_TAG, "reg app failed, app_id %04x, status %d", param->reg.app_id, param->reg.status);
             return;
         }
+        environmental_sensing_profile_tab[PROFILE_APP_IDX].gatts_if = gatts_if;
     }
     for (int idx = 0; idx < PROFILE_NUM; idx++)
     {
@@ -285,20 +286,21 @@ static void gatts_profile_event_handler(esp_gatts_cb_event_t event, esp_gatt_if_
     {
     case ESP_GATTS_REG_EVT: {
         ESP_LOGI(BLE_MANAGER_TAG, "ESP_GATTS_REG_EVT");
-        esp_err_t set_dev_name_ret = esp_ble_gap_set_device_name(BLE_DEVICE_NAME);
-        if (set_dev_name_ret)
+        esp_err_t ret;
+        ret = esp_ble_gap_set_device_name(BLE_DEVICE_NAME);
+        if (ret)
         {
-            ESP_LOGE(BLE_MANAGER_TAG, "set device name failed, error code = %x", set_dev_name_ret);
+            ESP_LOGE(BLE_MANAGER_TAG, "set device name failed, error code = %x", ret);
         }
-        esp_err_t ret = esp_ble_gap_config_adv_data(&adv_data);
+        ret = esp_ble_gap_config_adv_data(&adv_data);
         if (ret)
         {
             ESP_LOGE(BLE_MANAGER_TAG, "config adv data failed, error code = %x", ret);
         }
-        esp_err_t create_attr_ret = esp_ble_gatts_create_attr_tab(gatt_db, gatts_if, IDX_COUNT, SERVICE_INSTANCE_ID);
-        if (create_attr_ret)
+        ret = esp_ble_gatts_create_attr_tab(gatt_db, gatts_if, IDX_COUNT, SERVICE_INSTANCE_ID);
+        if (ret)
         {
-            ESP_LOGE(BLE_MANAGER_TAG, "create attr table failed, error code = %x", create_attr_ret);
+            ESP_LOGE(BLE_MANAGER_TAG, "create attr table failed, error code = %x", ret);
         }
     }
     break;
@@ -335,22 +337,21 @@ static void gatts_profile_event_handler(esp_gatts_cb_event_t event, esp_gatt_if_
         if (param->add_attr_tab.status != ESP_GATT_OK)
         {
             ESP_LOGE(BLE_MANAGER_TAG, "create attribute table failed, error code=0x%x", param->add_attr_tab.status);
+            return;
         }
-        else if (param->add_attr_tab.num_handle != IDX_COUNT)
+        if (param->add_attr_tab.num_handle != IDX_COUNT)
         {
             ESP_LOGE(BLE_MANAGER_TAG, "create attribute table abnormally, num_handle (%d) \
                         doesn't equal to IDX_COUNT(%d)",
                      param->add_attr_tab.num_handle, IDX_COUNT);
+            return;
         }
-        else
-        {
-            ESP_LOGI(BLE_MANAGER_TAG, "create attribute table successfully, the number handle = %d\n",
-                     param->add_attr_tab.num_handle);
-            uint16_t environmental_sensing_handle_table[IDX_COUNT];
-            memcpy(environmental_sensing_handle_table, param->add_attr_tab.handles,
-                   sizeof(environmental_sensing_handle_table));
-            esp_ble_gatts_start_service(environmental_sensing_handle_table[IDX_SERVICE]);
-        }
+        ESP_LOGI(BLE_MANAGER_TAG, "create attribute table successfully, the number handle = %d\n",
+                 param->add_attr_tab.num_handle);
+        uint16_t environmental_sensing_handle_table[IDX_COUNT];
+        memcpy(environmental_sensing_handle_table, param->add_attr_tab.handles,
+               sizeof(environmental_sensing_handle_table));
+        esp_ble_gatts_start_service(environmental_sensing_handle_table[IDX_SERVICE]);
         break;
     }
     default:
