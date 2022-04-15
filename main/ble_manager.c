@@ -268,16 +268,6 @@ static void gap_event_handler(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param
             ESP_LOGI(BLE_HANDLER_TAG, "advertising start successfully");
         }
         break;
-    case ESP_GAP_BLE_ADV_STOP_COMPLETE_EVT:
-        if (param->adv_stop_cmpl.status != ESP_BT_STATUS_SUCCESS)
-        {
-            ESP_LOGE(BLE_HANDLER_TAG, "Advertising stop failed");
-        }
-        else
-        {
-            ESP_LOGI(BLE_HANDLER_TAG, "Stop adv successfully\n");
-        }
-        break;
     case ESP_GAP_BLE_UPDATE_CONN_PARAMS_EVT:
         ESP_LOGI(
             BLE_HANDLER_TAG,
@@ -285,6 +275,7 @@ static void gap_event_handler(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param
             param->update_conn_params.status, param->update_conn_params.min_int, param->update_conn_params.max_int,
             param->update_conn_params.conn_int, param->update_conn_params.latency, param->update_conn_params.timeout);
         break;
+    case ESP_GAP_BLE_ADV_STOP_COMPLETE_EVT:
     default:
         break;
     }
@@ -316,18 +307,8 @@ static void gatts_profile_event_handler(esp_gatts_cb_event_t event, esp_gatt_if_
     case ESP_GATTS_READ_EVT:
         ESP_LOGI(BLE_HANDLER_TAG, "ESP_GATTS_READ_EVT");
         break;
-    case ESP_GATTS_WRITE_EVT:
-        ESP_LOGI(BLE_HANDLER_TAG, "ESP_GATTS_WRITE_EVT");
-        break;
-    case ESP_GATTS_EXEC_WRITE_EVT:
-        ESP_LOGI(BLE_HANDLER_TAG, "ESP_GATTS_EXEC_WRITE_EVT");
-        break;
     case ESP_GATTS_MTU_EVT:
         ESP_LOGI(BLE_HANDLER_TAG, "ESP_GATTS_MTU_EVT, MTU %d", param->mtu.mtu);
-        break;
-    case ESP_GATTS_CONF_EVT:
-        ESP_LOGI(BLE_HANDLER_TAG, "ESP_GATTS_CONF_EVT, status = %d, attr_handle %d", param->conf.status,
-                 param->conf.handle);
         break;
     case ESP_GATTS_START_EVT:
         ESP_LOGI(BLE_HANDLER_TAG, "SERVICE_START_EVT, status %d, service_handle %d", param->start.status,
@@ -373,6 +354,9 @@ static void gatts_profile_event_handler(esp_gatts_cb_event_t event, esp_gatt_if_
         }
         break;
     }
+    case ESP_GATTS_WRITE_EVT:
+    case ESP_GATTS_EXEC_WRITE_EVT:
+    case ESP_GATTS_CONF_EVT:
     case ESP_GATTS_STOP_EVT:
     case ESP_GATTS_OPEN_EVT:
     case ESP_GATTS_CANCEL_OPEN_EVT:
