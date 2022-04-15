@@ -37,6 +37,44 @@ Allowed range is: 0.00 to 100.00
 A value of 0xFFFF represents ‘value is not known’.
 All other values are prohibited.
 
+## Lifecycle for BLE Events
+
+```sh
+#
+# Booting application
+#
+
+W (937) gatts_event_handler: ESP_GATTS_REG_EVT
+W (947) gatts_profile_event_handler: ESP_GATTS_REG_EVT
+W (947) gatts_profile_event_handler: ESP_GATTS_CREAT_ATTR_TAB_EVT:
+W (957) gap_event_handler: ESP_GAP_BLE_ADV_DATA_SET_COMPLETE_EVT
+W (967) gatts_profile_event_handler: ESP_GATTS_START_EVT
+W (977) gap_event_handler: ESP_GAP_BLE_ADV_START_COMPLETE_EVT
+
+#
+# Connecting to application from BLE client
+#
+
+W (17257) gatts_profile_event_handler: ESP_GATTS_CONNECT_EVT
+W (17347) gatts_profile_event_handler: ESP_GATTS_MTU_EVT
+W (17677) gap_event_handler: ESP_GAP_BLE_UPDATE_CONN_PARAMS_EVT
+
+#
+# Reading characteristic 3 times
+#
+
+W (20197) gatts_profile_event_handler: ESP_GATTS_READ_EVT
+W (22717) gatts_profile_event_handler: ESP_GATTS_READ_EVT
+W (23587) gatts_profile_event_handler: ESP_GATTS_READ_EVT
+
+#
+# Disconnecting from application
+#
+
+W (27577) gatts_profile_event_handler: ESP_GATTS_DISCONNECT_EVT
+W (27597) gap_event_handler: ESP_GAP_BLE_ADV_START_COMPLETE_EVT
+```
+
 # Old Stuff
 
 | Supported Targets | ESP32 | ESP32-C3 |
