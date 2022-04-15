@@ -65,12 +65,12 @@ enum
 // STATIC PROTOTYPES
 //==================================================================================================
 
-static void gap_event_handler(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param_t *param);
+static void gatts_event_handler(esp_gatts_cb_event_t event, esp_gatt_if_t gatts_if, esp_ble_gatts_cb_param_t *param);
 
 static void gatts_profile_event_handler(esp_gatts_cb_event_t event, esp_gatt_if_t gatts_if,
                                         esp_ble_gatts_cb_param_t *param);
 
-static void gatts_event_handler(esp_gatts_cb_event_t event, esp_gatt_if_t gatts_if, esp_ble_gatts_cb_param_t *param);
+static void gap_event_handler(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param_t *param);
 
 //==================================================================================================
 // STATIC VARIABLES
@@ -249,35 +249,31 @@ esp_err_t ble_manager_write_temperature(float temperature)
 // STATIC FUNCTIONS
 //==================================================================================================
 
-static void gap_event_handler(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param_t *param)
+static void gatts_event_handler(esp_gatts_cb_event_t event, esp_gatt_if_t gatts_if, esp_ble_gatts_cb_param_t *param)
 {
-    switch (event)
+    /* If event is register event, store the gatts_if for each profile */
+    if (event == ESP_GATTS_REG_EVT)
     {
-    case ESP_GAP_BLE_ADV_DATA_SET_COMPLETE_EVT:
-    case ESP_GAP_BLE_SCAN_RSP_DATA_SET_COMPLETE_EVT:
-        esp_ble_gap_start_advertising(&adv_params);
-        break;
-    case ESP_GAP_BLE_ADV_START_COMPLETE_EVT:
-        /* advertising start complete event to indicate advertising start successfully or failed */
-        if (param->adv_start_cmpl.status != ESP_BT_STATUS_SUCCESS)
+        if (param->reg.status == ESP_GATT_OK)
         {
-            ESP_LOGE(BLE_HANDLER_TAG, "advertising start failed");
+            environmental_sensing_profile_tab[PROFILE_APP_IDX].gatts_if = gatts_if;
         }
         else
         {
-            ESP_LOGI(BLE_HANDLER_TAG, "advertising start successfully");
+            ESP_LOGE(BLE_HANDLER_TAG, "reg app failed, app_id %04x, status %d", param->reg.app_id, param->reg.status);
+            return;
         }
-        break;
-    case ESP_GAP_BLE_UPDATE_CONN_PARAMS_EVT:
-        ESP_LOGI(
-            BLE_HANDLER_TAG,
-            "update connection params status = %d, min_int = %d, max_int = %d,conn_int = %d,latency = %d, timeout = %d",
-            param->update_conn_params.status, param->update_conn_params.min_int, param->update_conn_params.max_int,
-            param->update_conn_params.conn_int, param->update_conn_params.latency, param->update_conn_params.timeout);
-        break;
-    case ESP_GAP_BLE_ADV_STOP_COMPLETE_EVT:
-    default:
-        break;
+    }
+    for (int idx = 0; idx < PROFILE_NUM; idx++)
+    {
+        /* ESP_GATT_IF_NONE, not specify a certain gatt_if, need to call every profile cb function */
+        if (gatts_if == ESP_GATT_IF_NONE || gatts_if == environmental_sensing_profile_tab[idx].gatts_if)
+        {
+            if (environmental_sensing_profile_tab[idx].gatts_cb)
+            {
+                environmental_sensing_profile_tab[idx].gatts_cb(event, gatts_if, param);
+            }
+        }
     }
 }
 
@@ -370,30 +366,34 @@ static void gatts_profile_event_handler(esp_gatts_cb_event_t event, esp_gatt_if_
     }
 }
 
-static void gatts_event_handler(esp_gatts_cb_event_t event, esp_gatt_if_t gatts_if, esp_ble_gatts_cb_param_t *param)
+static void gap_event_handler(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param_t *param)
 {
-    /* If event is register event, store the gatts_if for each profile */
-    if (event == ESP_GATTS_REG_EVT)
+    switch (event)
     {
-        if (param->reg.status == ESP_GATT_OK)
+    case ESP_GAP_BLE_ADV_DATA_SET_COMPLETE_EVT:
+    case ESP_GAP_BLE_SCAN_RSP_DATA_SET_COMPLETE_EVT:
+        esp_ble_gap_start_advertising(&adv_params);
+        break;
+    case ESP_GAP_BLE_ADV_START_COMPLETE_EVT:
+        /* advertising start complete event to indicate advertising start successfully or failed */
+        if (param->adv_start_cmpl.status != ESP_BT_STATUS_SUCCESS)
         {
-            environmental_sensing_profile_tab[PROFILE_APP_IDX].gatts_if = gatts_if;
+            ESP_LOGE(BLE_HANDLER_TAG, "advertising start failed");
         }
         else
         {
-            ESP_LOGE(BLE_HANDLER_TAG, "reg app failed, app_id %04x, status %d", param->reg.app_id, param->reg.status);
-            return;
+            ESP_LOGI(BLE_HANDLER_TAG, "advertising start successfully");
         }
-    }
-    for (int idx = 0; idx < PROFILE_NUM; idx++)
-    {
-        /* ESP_GATT_IF_NONE, not specify a certain gatt_if, need to call every profile cb function */
-        if (gatts_if == ESP_GATT_IF_NONE || gatts_if == environmental_sensing_profile_tab[idx].gatts_if)
-        {
-            if (environmental_sensing_profile_tab[idx].gatts_cb)
-            {
-                environmental_sensing_profile_tab[idx].gatts_cb(event, gatts_if, param);
-            }
-        }
+        break;
+    case ESP_GAP_BLE_UPDATE_CONN_PARAMS_EVT:
+        ESP_LOGI(
+            BLE_HANDLER_TAG,
+            "update connection params status = %d, min_int = %d, max_int = %d,conn_int = %d,latency = %d, timeout = %d",
+            param->update_conn_params.status, param->update_conn_params.min_int, param->update_conn_params.max_int,
+            param->update_conn_params.conn_int, param->update_conn_params.latency, param->update_conn_params.timeout);
+        break;
+    case ESP_GAP_BLE_ADV_STOP_COMPLETE_EVT:
+    default:
+        break;
     }
 }
