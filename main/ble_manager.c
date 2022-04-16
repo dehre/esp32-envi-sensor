@@ -22,9 +22,6 @@
 // DEFINES - MACROS
 //==================================================================================================
 
-// TODO LORIS: device name in header file for visibility
-#define BLE_DEVICE_NAME "Envi Sensor" // device name shown when advertising
-
 #define ESP_LOG_TAG "BLE_MANAGER"
 #include "iferr.h"
 
