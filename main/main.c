@@ -13,7 +13,7 @@
 // DEFINES - MACROS
 //==================================================================================================
 
-#define MAIN_TAG "MAIN"
+#define ESP_LOG_TAG "MAIN"
 
 #define TASK_STACK_DEPTH 2048
 
@@ -98,12 +98,12 @@ static void read_sensor_task(void *param)
         sensor_reading_t reading = {.temperature = (float)i, .humidity = (i / (float)2.0)};
         if (xQueueSend(mailbox_monitor, (void *)&reading, portMAX_DELAY) != pdPASS)
         {
-            ESP_LOGW(MAIN_TAG, "Last sensor reading not received from monitor, overwriting with new value");
+            ESP_LOGW(ESP_LOG_TAG, "Last sensor reading not received from monitor, overwriting with new value");
             configASSERT(xQueueOverwrite(mailbox_monitor, (void *)&reading));
         }
         if (xQueueSend(mailbox_ble, (void *)&reading, portMAX_DELAY) != pdPASS)
         {
-            ESP_LOGW(MAIN_TAG, "Last sensor reading not received from BLE peripheral, overwriting with new value");
+            ESP_LOGW(ESP_LOG_TAG, "Last sensor reading not received from BLE peripheral, overwriting with new value");
             configASSERT(xQueueOverwrite(mailbox_ble, (void *)&reading));
         }
     }
