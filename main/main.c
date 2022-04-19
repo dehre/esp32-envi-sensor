@@ -117,7 +117,7 @@ static void update_monitor_task(void *param)
         sensor_reading_t reading;
         if (xQueueReceive(mailbox_monitor, &reading, portMAX_DELAY))
         {
-            printf("MONITOR -- temperature: %f humidity: %f\n", reading.temperature, reading.humidity);
+            // printf("MONITOR -- temperature: %f humidity: %f\n", reading.temperature, reading.humidity);
         }
     }
 }
@@ -130,7 +130,7 @@ static void update_ble_task(void *param)
         sensor_reading_t reading;
         if (xQueueReceive(mailbox_ble, &reading, portMAX_DELAY))
         {
-            printf("BLE -- temperature: %f humidity: %f\n", reading.temperature, reading.humidity);
+            // printf("BLE -- temperature: %f humidity: %f\n", reading.temperature, reading.humidity);
         }
     }
 }

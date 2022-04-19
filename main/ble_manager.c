@@ -22,6 +22,7 @@
 // DEFINES - MACROS
 //==================================================================================================
 
+#define DEBUG_TAG "LORIS_DEBUG" // TODO LORIS: delete me
 #define ESP_LOG_TAG "BLE_MANAGER"
 #include "iferr.h"
 
@@ -137,6 +138,7 @@ static const uint16_t charact_declaration_uuid = ESP_GATT_UUID_CHAR_DECLARE;
 static const uint8_t charact_property_read = ESP_GATT_CHAR_PROP_BIT_READ;
 
 // TODO LORIS: store a int16_t as an uint8_t[2]
+// TODO LORIS: this is just the initial value, set it to 0x0,0x0
 static const uint8_t temperature_charact_value[2] = {0x17, 0x50};
 
 // clang-format off
@@ -155,7 +157,7 @@ static const esp_gatts_attr_db_t gatt_db[IDX_COUNT] =
 
     /* Characteristic Value */
     [IDX_TEMPERATURE_CHARACT_VALUE] =
-    {{ESP_GATT_AUTO_RSP}, {ESP_UUID_LEN_16, (uint8_t *)&GATTS_TEMPERATURE_CHARACT_UUID, ESP_GATT_PERM_READ | ESP_GATT_PERM_WRITE,
+    {{ESP_GATT_RSP_BY_APP}, {ESP_UUID_LEN_16, (uint8_t *)&GATTS_TEMPERATURE_CHARACT_UUID, ESP_GATT_PERM_READ | ESP_GATT_PERM_WRITE,
       sizeof(temperature_charact_value), sizeof(temperature_charact_value), (uint8_t*)temperature_charact_value}},
 };
 // clang-format on
@@ -239,7 +241,35 @@ static void gatts_profile_event_handler(esp_gatts_cb_event_t event, esp_gatt_if_
     }
     break;
     case ESP_GATTS_READ_EVT:
-        ESP_LOGI(ESP_LOG_TAG, "ESP_GATTS_READ_EVT");
+        ESP_LOGI(ESP_LOG_TAG, "ESP_GATTS_READ_EVT, conn_id %d, trans_id %d, handle %d", param->read.conn_id,
+                 param->read.trans_id, param->read.handle);
+        //
+        // DEBUG - Start
+        //
+        uint16_t length = sizeof(esp_gatts_attr_db_t);
+        const uint8_t *prf_char;
+        esp_gatt_status_t get_attr_ret = esp_ble_gatts_get_attr_value(param->read.handle, &length, &prf_char);
+        if (get_attr_ret == ESP_FAIL)
+        {
+            ESP_LOGE(DEBUG_TAG, "ILLEGAL HANDLE");
+        }
+        ESP_LOGI(DEBUG_TAG, "the gatts char length = %x", length);
+        for (int i = 0; i < length; i++)
+        {
+            ESP_LOGI(DEBUG_TAG, "prf_char[%x] =%x", i, prf_char[i]);
+        }
+        //
+        // DEBUG - End
+        //
+        static uint8_t new_temperature[2] = {1, 2};
+        new_temperature[0] = new_temperature[0] * 2;
+        new_temperature[1] = new_temperature[1] * 3;
+        esp_gatt_rsp_t rsp = {0};
+        rsp.attr_value.handle = param->read.handle;
+        rsp.attr_value.len = sizeof(new_temperature);
+        memcpy(rsp.attr_value.value, new_temperature, sizeof(new_temperature));
+        IFERR_LOG(esp_ble_gatts_send_response(gatts_if, param->read.conn_id, param->read.trans_id, ESP_GATT_OK, &rsp),
+                  "failed to send response");
         break;
     case ESP_GATTS_MTU_EVT:
         ESP_LOGI(ESP_LOG_TAG, "ESP_GATTS_MTU_EVT, MTU %d", param->mtu.mtu);
