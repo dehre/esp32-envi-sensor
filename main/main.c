@@ -14,6 +14,7 @@
 //==================================================================================================
 
 #define ESP_LOG_TAG "MAIN"
+#include "iferr.h"
 
 #define TASK_STACK_DEPTH 2048
 
@@ -130,7 +131,8 @@ static void update_ble_task(void *param)
         sensor_reading_t reading;
         if (xQueueReceive(mailbox_ble, &reading, portMAX_DELAY))
         {
-            // printf("BLE -- temperature: %f humidity: %f\n", reading.temperature, reading.humidity);
+            IFERR_LOG(ble_manager_write_temperature(reading.temperature), "failed to write temperature");
+            IFERR_LOG(ble_manager_write_humidity(reading.humidity), "failed to write humidity");
         }
     }
 }

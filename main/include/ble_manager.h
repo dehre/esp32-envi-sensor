@@ -7,3 +7,5 @@
 esp_err_t ble_manager_init(void);
 
 esp_err_t ble_manager_write_temperature(float temperature);
+
+esp_err_t ble_manager_write_humidity(float humidity);

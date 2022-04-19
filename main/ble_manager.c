@@ -3,6 +3,7 @@
 //==================================================================================================
 
 #include "ble_manager.h"
+#include "utils.h"
 
 #include "esp_bt.h"
 #include "esp_bt_main.h"
@@ -192,6 +193,7 @@ static const esp_gatts_attr_db_t gatt_db[IDX_COUNT] =
 
 esp_err_t ble_manager_init(void)
 {
+    ESP_LOGI(ESP_LOG_TAG, "%s - initialize", __func__);
     esp_err_t ret = nvs_flash_init();
     if (ret == ESP_ERR_NVS_NO_FREE_PAGES || ret == ESP_ERR_NVS_NEW_VERSION_FOUND)
     {
@@ -217,7 +219,25 @@ esp_err_t ble_manager_init(void)
 
 esp_err_t ble_manager_write_temperature(float temperature)
 {
-    printf("write temperature %f\n", temperature);
+    ESP_LOGI(ESP_LOG_TAG, "%s - write %f", __func__, temperature);
+    // See: GATT Specification Supplement Datasheet Page 223 Section 3.204
+    if (temperature < -273.15 || temperature > 327.67)
+    {
+        return ESP_ERR_INVALID_ARG;
+    }
+    store_float_into_uint8_arr(&temperature, temperature_charact_value);
+    return ESP_OK;
+}
+
+esp_err_t ble_manager_write_humidity(float humidity)
+{
+    ESP_LOGI(ESP_LOG_TAG, "%s - write %f", __func__, humidity);
+    // See: GATT Specification Supplement Datasheet Page 146 Section 3.114
+    if (humidity < 0.00 || humidity > 100.00)
+    {
+        return ESP_ERR_INVALID_ARG;
+    }
+    store_float_into_uint8_arr(&humidity, humidity_charact_value);
     return ESP_OK;
 }
 
