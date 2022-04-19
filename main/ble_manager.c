@@ -16,6 +16,8 @@
 #include "freertos/event_groups.h"
 #include "freertos/task.h"
 #include "nvs_flash.h"
+#include <assert.h>
+#include <stdbool.h>
 #include <string.h>
 
 //==================================================================================================
@@ -67,6 +69,8 @@ enum
 //==================================================================================================
 // STATIC PROTOTYPES
 //==================================================================================================
+
+static esp_err_t gatts_read_event_handler(esp_gatt_if_t gatts_if, esp_ble_gatts_cb_param_t *param);
 
 static void gatts_event_handler(esp_gatts_cb_event_t event, esp_gatt_if_t gatts_if, esp_ble_gatts_cb_param_t *param);
 
@@ -141,15 +145,18 @@ static const uint16_t primary_service_uuid = ESP_GATT_UUID_PRI_SERVICE;
 static const uint16_t charact_declaration_uuid = ESP_GATT_UUID_CHAR_DECLARE;
 static const uint8_t charact_property_read = ESP_GATT_CHAR_PROP_BIT_READ;
 
-/*
- * Sentinel values are used to detect if the ESP_GATTS_READ_EVT has been triggered
- *   by a temperature or a humidity reading
- */
+/* temperature_charact_value and humidity_charact_value hold the last temperature and
+ *   humidity reading, respectively */
+static uint8_t temperature_charact_value[2];
+static uint8_t humidity_charact_value[2];
+
+/* temperature_charact_sentinel_value and humidity_charact_sentinel_value are used to detect
+ *   if the ESP_GATTS_READ_EVT has been triggered by a temperature or a humidity reading */
 static const uint8_t temperature_charact_sentinel_value[2] = {0x80, 0x00};
 static const uint8_t humidity_charact_sentinel_value[2] = {0xFF, 0xFF};
 
-// clang-format off
 /* Full Database Description - Used to add attributes into the database */
+// clang-format off
 static const esp_gatts_attr_db_t gatt_db[IDX_COUNT] =
 {
     // Service Declaration
@@ -218,6 +225,36 @@ esp_err_t ble_manager_write_temperature(float temperature)
 // STATIC FUNCTIONS
 //==================================================================================================
 
+static esp_err_t gatts_read_event_handler(esp_gatt_if_t gatts_if, esp_ble_gatts_cb_param_t *param)
+{
+    uint16_t sentinel_value_length;
+    const uint8_t *sentinel_value;
+    IFERR_RETE(esp_ble_gatts_get_attr_value(param->read.handle, &sentinel_value_length, &sentinel_value),
+               "illegal handle %d", param->read.handle);
+    assert(sentinel_value_length == 2);
+
+    esp_gatt_rsp_t rsp = {0};
+    rsp.attr_value.handle = param->read.handle;
+    if (memcmp(temperature_charact_sentinel_value, sentinel_value, sizeof(temperature_charact_sentinel_value)) == 0)
+    {
+        rsp.attr_value.len = sizeof(temperature_charact_value);
+        memcpy(rsp.attr_value.value, temperature_charact_value, sizeof(temperature_charact_value));
+    }
+    else if (memcmp(humidity_charact_sentinel_value, sentinel_value, sizeof(humidity_charact_sentinel_value)) == 0)
+    {
+        rsp.attr_value.len = sizeof(humidity_charact_value);
+        memcpy(rsp.attr_value.value, humidity_charact_value, sizeof(humidity_charact_value));
+    }
+    else
+    {
+        assert(0);
+    }
+
+    IFERR_RETE(esp_ble_gatts_send_response(gatts_if, param->read.conn_id, param->read.trans_id, ESP_GATT_OK, &rsp),
+               "failed to send response");
+    return ESP_OK;
+}
+
 static void gatts_event_handler(esp_gatts_cb_event_t event, esp_gatt_if_t gatts_if, esp_ble_gatts_cb_param_t *param)
 {
     /* If event is register event, store the gatts_if for each profile */
@@ -260,45 +297,7 @@ static void gatts_profile_event_handler(esp_gatts_cb_event_t event, esp_gatt_if_
     case ESP_GATTS_READ_EVT:
         ESP_LOGI(ESP_LOG_TAG, "ESP_GATTS_READ_EVT, conn_id %d, trans_id %d, handle %d", param->read.conn_id,
                  param->read.trans_id, param->read.handle);
-        //
-        // DEBUG - Start
-        //
-        uint16_t length = sizeof(esp_gatts_attr_db_t);
-        const uint8_t *prf_char;
-        esp_gatt_status_t get_attr_ret = esp_ble_gatts_get_attr_value(param->read.handle, &length, &prf_char);
-        if (get_attr_ret == ESP_FAIL)
-        {
-            ESP_LOGE(DEBUG_TAG, "ILLEGAL HANDLE");
-        }
-        ESP_LOGI(DEBUG_TAG, "the gatts char length = %x", length);
-        for (int i = 0; i < length; i++)
-        {
-            ESP_LOGI(DEBUG_TAG, "prf_char[%x] =%x", i, prf_char[i]);
-        }
-        if (memcmp(temperature_charact_sentinel_value, prf_char, sizeof(temperature_charact_sentinel_value)) == 0)
-        {
-            ESP_LOGI(DEBUG_TAG, "READING TEMPERATURE");
-        }
-        else if (memcmp(humidity_charact_sentinel_value, prf_char, sizeof(humidity_charact_sentinel_value)) == 0)
-        {
-            ESP_LOGI(DEBUG_TAG, "READING HUMIDITY");
-        }
-        else
-        {
-            IFERR_RETV(ESP_FAIL, "unknown characteristic read: 0x%x%x", prf_char[0], prf_char[1]);
-        }
-        //
-        // DEBUG - End
-        //
-        static uint8_t new_temperature[2] = {1, 2};
-        new_temperature[0] = new_temperature[0] * 2;
-        new_temperature[1] = new_temperature[1] * 3;
-        esp_gatt_rsp_t rsp = {0};
-        rsp.attr_value.handle = param->read.handle;
-        rsp.attr_value.len = sizeof(new_temperature);
-        memcpy(rsp.attr_value.value, new_temperature, sizeof(new_temperature));
-        IFERR_LOG(esp_ble_gatts_send_response(gatts_if, param->read.conn_id, param->read.trans_id, ESP_GATT_OK, &rsp),
-                  "failed to send response");
+        IFERR_RETV(gatts_read_event_handler(gatts_if, param), "failed to handle ESP_GATTS_READ_EVT");
         break;
     case ESP_GATTS_MTU_EVT:
         ESP_LOGI(ESP_LOG_TAG, "ESP_GATTS_MTU_EVT, MTU %d", param->mtu.mtu);
