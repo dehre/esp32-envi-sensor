@@ -58,6 +58,9 @@ enum
     IDX_TEMPERATURE_CHARACT,
     IDX_TEMPERATURE_CHARACT_VALUE,
 
+    IDX_HUMIDITY_CHARACT,
+    IDX_HUMIDITY_CHARACT_VALUE,
+
     IDX_COUNT,
 };
 
@@ -132,14 +135,18 @@ static struct gatts_profile_inst environmental_sensing_profile_tab[PROFILE_NUM] 
 
 static const uint16_t GATTS_ENVIRONMENTAL_SENSING_SERVICE_UUID = 0x181A;
 static const uint16_t GATTS_TEMPERATURE_CHARACT_UUID = 0x2A6E;
+static const uint16_t GATTS_HUMIDITY_CHARACT_UUID = 0x2A6F;
 
 static const uint16_t primary_service_uuid = ESP_GATT_UUID_PRI_SERVICE;
 static const uint16_t charact_declaration_uuid = ESP_GATT_UUID_CHAR_DECLARE;
 static const uint8_t charact_property_read = ESP_GATT_CHAR_PROP_BIT_READ;
 
-// TODO LORIS: store a int16_t as an uint8_t[2]
-// TODO LORIS: this is just the initial value, set it to 0x0,0x0
-static const uint8_t temperature_charact_value[2] = {0x17, 0x50};
+/*
+ * Sentinel values are used to detect if the ESP_GATTS_READ_EVT has been triggered
+ *   by a temperature or a humidity reading
+ */
+static const uint8_t temperature_charact_sentinel_value[2] = {0x80, 0x00};
+static const uint8_t humidity_charact_sentinel_value[2] = {0xFF, 0xFF};
 
 // clang-format off
 /* Full Database Description - Used to add attributes into the database */
@@ -158,7 +165,17 @@ static const esp_gatts_attr_db_t gatt_db[IDX_COUNT] =
     /* Characteristic Value */
     [IDX_TEMPERATURE_CHARACT_VALUE] =
     {{ESP_GATT_RSP_BY_APP}, {ESP_UUID_LEN_16, (uint8_t *)&GATTS_TEMPERATURE_CHARACT_UUID, ESP_GATT_PERM_READ | ESP_GATT_PERM_WRITE,
-      sizeof(temperature_charact_value), sizeof(temperature_charact_value), (uint8_t*)temperature_charact_value}},
+      sizeof(temperature_charact_sentinel_value), sizeof(temperature_charact_sentinel_value), (uint8_t*)temperature_charact_sentinel_value}},
+
+    /* Characteristic Declaration */
+    [IDX_HUMIDITY_CHARACT] =
+    {{ESP_GATT_AUTO_RSP}, {ESP_UUID_LEN_16, (uint8_t *)&charact_declaration_uuid, ESP_GATT_PERM_READ,
+      sizeof(charact_property_read), sizeof(charact_property_read), (uint8_t*)&charact_property_read}},
+
+    /* Characteristic Value */
+    [IDX_HUMIDITY_CHARACT_VALUE] =
+    {{ESP_GATT_RSP_BY_APP}, {ESP_UUID_LEN_16, (uint8_t *)&GATTS_HUMIDITY_CHARACT_UUID, ESP_GATT_PERM_READ | ESP_GATT_PERM_WRITE,
+      sizeof(humidity_charact_sentinel_value), sizeof(humidity_charact_sentinel_value), (uint8_t*)humidity_charact_sentinel_value}},
 };
 // clang-format on
 
@@ -257,6 +274,18 @@ static void gatts_profile_event_handler(esp_gatts_cb_event_t event, esp_gatt_if_
         for (int i = 0; i < length; i++)
         {
             ESP_LOGI(DEBUG_TAG, "prf_char[%x] =%x", i, prf_char[i]);
+        }
+        if (memcmp(temperature_charact_sentinel_value, prf_char, sizeof(temperature_charact_sentinel_value)) == 0)
+        {
+            ESP_LOGI(DEBUG_TAG, "READING TEMPERATURE");
+        }
+        else if (memcmp(humidity_charact_sentinel_value, prf_char, sizeof(humidity_charact_sentinel_value)) == 0)
+        {
+            ESP_LOGI(DEBUG_TAG, "READING HUMIDITY");
+        }
+        else
+        {
+            IFERR_RETV(ESP_FAIL, "unknown characteristic read: 0x%x%x", prf_char[0], prf_char[1]);
         }
         //
         // DEBUG - End
