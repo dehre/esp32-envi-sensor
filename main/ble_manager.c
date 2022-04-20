@@ -219,7 +219,7 @@ esp_err_t ble_manager_init(void)
 
 esp_err_t ble_manager_write_temperature(float temperature)
 {
-    ESP_LOGI(ESP_LOG_TAG, "%s - write %f", __func__, temperature);
+    ESP_LOGD(ESP_LOG_TAG, "%s - write %f", __func__, temperature);
     // See: GATT Specification Supplement Datasheet Page 223 Section 3.204
     if (temperature < -273.15 || temperature > 327.67)
     {
@@ -231,7 +231,7 @@ esp_err_t ble_manager_write_temperature(float temperature)
 
 esp_err_t ble_manager_write_humidity(float humidity)
 {
-    ESP_LOGI(ESP_LOG_TAG, "%s - write %f", __func__, humidity);
+    ESP_LOGD(ESP_LOG_TAG, "%s - write %f", __func__, humidity);
     // See: GATT Specification Supplement Datasheet Page 146 Section 3.114
     if (humidity < 0.00 || humidity > 100.00)
     {

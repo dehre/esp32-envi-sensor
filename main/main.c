@@ -9,6 +9,7 @@
 #include "freertos/queue.h"
 #include "freertos/task.h"
 #include "nokia_5110_lcd.h"
+#include "sht21.h"
 
 //==================================================================================================
 // DEFINES - MACROS
@@ -61,6 +62,8 @@ static QueueHandle_t mailbox_ble = NULL;
 
 void app_main(void)
 {
+    // TODO LORIS: better error handling here?
+    ESP_ERROR_CHECK(sht21_init(0, GPIO_NUM_32, GPIO_NUM_33, sht21_i2c_speed_standard));
     ESP_ERROR_CHECK(ble_manager_init());
     nokia_5110_lcd_init();
 
@@ -92,23 +95,46 @@ void app_main(void)
 static void read_sensor_task(void *param)
 {
     (void)param;
-    const TickType_t frequency = 1000 / portTICK_PERIOD_MS;
+    const TickType_t frequency = 5000 / portTICK_PERIOD_MS;
     TickType_t lastWakeTime = xTaskGetTickCount();
-    for (int i = -10;; i++)
+    while (1)
     {
-        vTaskDelayUntil(&lastWakeTime, frequency);
+        esp_err_t err;
+        float temperature_reading;
+        float humidity_reading;
 
-        sensor_reading_t reading = {.temperature = (float)i, .humidity = (i / (float)2.0)};
+        err = sht21_get_temperature(&temperature_reading);
+        if (err != ESP_OK)
+        {
+            // TODO LORIS: use normalized LOGE call from iferr module
+            ESP_LOGE(ESP_LOG_TAG, "%s - could not read temperat, error = %s", "read_sensor_task", esp_err_to_name(err));
+            continue;
+        }
+        err = sht21_get_humidity(&humidity_reading);
+        if (err != ESP_OK)
+        {
+            // TODO LORIS: use normalized LOGE call from iferr module
+            ESP_LOGE(ESP_LOG_TAG, "%s - could not read humidity, error = %s", "read_sensor_task", esp_err_to_name(err));
+            continue;
+        }
+        if (humidity_reading < 0)
+            humidity_reading = 0;
+        if (humidity_reading > 100)
+            humidity_reading = 100;
+
+        sensor_reading_t reading = {.temperature = temperature_reading, .humidity = humidity_reading};
         if (xQueueSend(mailbox_monitor, (void *)&reading, portMAX_DELAY) != pdPASS)
         {
-            ESP_LOGW(ESP_LOG_TAG, "Last sensor reading not received from monitor, overwriting with new value");
+            ESP_LOGW(ESP_LOG_TAG, "last sensor reading not received from monitor, overwriting with new value");
             configASSERT(xQueueOverwrite(mailbox_monitor, (void *)&reading));
         }
         if (xQueueSend(mailbox_ble, (void *)&reading, portMAX_DELAY) != pdPASS)
         {
-            ESP_LOGW(ESP_LOG_TAG, "Last sensor reading not received from BLE peripheral, overwriting with new value");
+            ESP_LOGW(ESP_LOG_TAG, "last sensor reading not received from BLE peripheral, overwriting with new value");
             configASSERT(xQueueOverwrite(mailbox_ble, (void *)&reading));
         }
+
+        vTaskDelayUntil(&lastWakeTime, frequency);
     }
 }
 
