@@ -8,6 +8,7 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/queue.h"
 #include "freertos/task.h"
+#include "nokia_5110_lcd.h"
 
 //==================================================================================================
 // DEFINES - MACROS
@@ -61,6 +62,7 @@ static QueueHandle_t mailbox_ble = NULL;
 void app_main(void)
 {
     ESP_ERROR_CHECK(ble_manager_init());
+    nokia_5110_lcd_init();
 
     mailbox_monitor = xQueueCreate(1, sizeof(sensor_reading_t));
     mailbox_ble = xQueueCreate(1, sizeof(sensor_reading_t));
@@ -118,7 +120,8 @@ static void update_monitor_task(void *param)
         sensor_reading_t reading;
         if (xQueueReceive(mailbox_monitor, &reading, portMAX_DELAY))
         {
-            // printf("MONITOR -- temperature: %f humidity: %f\n", reading.temperature, reading.humidity);
+            nokia_5110_lcd_write_temperature(reading.temperature);
+            nokia_5110_lcd_write_humidity(reading.humidity);
         }
     }
 }
