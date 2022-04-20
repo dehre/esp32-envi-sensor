@@ -10,12 +10,3 @@ void store_float_into_uint8_arr(const float *f32_value, uint8_t arr[2])
     arr[1] = msb;
     arr[0] = lsb;
 }
-
-// TODO LORIS: deleteme
-void read_float_from_uint8_arr(const uint8_t (*arr)[2], float *f32_value)
-{
-    uint8_t msb = (*arr)[1];
-    uint8_t lsb = (*arr)[0];
-    int16_t i16_val = (int16_t)((msb << 8) | lsb);
-    *f32_value = (float)i16_val / 100;
-}
