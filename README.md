@@ -74,15 +74,3 @@ W (23587) gatts_profile_event_handler: ESP_GATTS_READ_EVT
 W (27577) gatts_profile_event_handler: ESP_GATTS_DISCONNECT_EVT
 W (27597) gap_event_handler: ESP_GAP_BLE_ADV_START_COMPLETE_EVT
 ```
-
-# Old Stuff
-
-| Supported Targets | ESP32 | ESP32-C3 |
-| ----------------- | ----- | -------- |
-
-ESP-IDF Gatt Server Service Table Demo
-===============================================
-
-This demo shows how to create a GATT service with an attribute table defined in one place. Provided API releases the user from adding attributes one by one as implemented in BLUEDROID. A demo of the other method to create the attribute table is presented in [gatt_server_demo](../gatt_server).
-
-Please check the [tutorial](tutorial/Gatt_Server_Service_Table_Example_Walkthrough.md) for more information about this example.
