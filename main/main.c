@@ -106,7 +106,7 @@ static void read_sensor_task(void *param)
             IFERR_LOG(err, "could not read temperature");
             continue;
         }
-        if ((err = sht21_get_temperature(&humidity_reading)) != ESP_OK)
+        if ((err = sht21_get_humidity(&humidity_reading)) != ESP_OK)
         {
             IFERR_LOG(err, "could not read humidity");
             continue;
