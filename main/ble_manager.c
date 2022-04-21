@@ -25,7 +25,6 @@
 // DEFINES - MACROS
 //==================================================================================================
 
-#define DEBUG_TAG "LORIS_DEBUG" // TODO LORIS: delete me
 #define ESP_LOG_TAG "BLE_MANAGER"
 #include "iferr.h"
 

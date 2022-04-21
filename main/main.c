@@ -62,7 +62,6 @@ static QueueHandle_t mailbox_ble = NULL;
 
 void app_main(void)
 {
-    // TODO LORIS: better error handling here?
     ESP_ERROR_CHECK(sht21_init(0, GPIO_NUM_32, GPIO_NUM_33, sht21_i2c_speed_standard));
     ESP_ERROR_CHECK(ble_manager_init());
     nokia_5110_lcd_init();
@@ -102,21 +101,17 @@ static void read_sensor_task(void *param)
         esp_err_t err;
         float temperature_reading;
         float humidity_reading;
+        if ((err = sht21_get_temperature(&temperature_reading)) != ESP_OK)
+        {
+            IFERR_LOG(err, "could not read temperature");
+            continue;
+        }
+        if ((err = sht21_get_temperature(&humidity_reading)) != ESP_OK)
+        {
+            IFERR_LOG(err, "could not read humidity");
+            continue;
+        }
 
-        err = sht21_get_temperature(&temperature_reading);
-        if (err != ESP_OK)
-        {
-            // TODO LORIS: use normalized LOGE call from iferr module
-            ESP_LOGE(ESP_LOG_TAG, "%s - could not read temperat, error = %s", "read_sensor_task", esp_err_to_name(err));
-            continue;
-        }
-        err = sht21_get_humidity(&humidity_reading);
-        if (err != ESP_OK)
-        {
-            // TODO LORIS: use normalized LOGE call from iferr module
-            ESP_LOGE(ESP_LOG_TAG, "%s - could not read humidity, error = %s", "read_sensor_task", esp_err_to_name(err));
-            continue;
-        }
         if (humidity_reading < 0)
             humidity_reading = 0;
         if (humidity_reading > 100)
