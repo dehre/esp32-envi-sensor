@@ -1,6 +1,26 @@
 # ESP32 Envi Sensor
 
-## Architecture
+Use an ESP32 board to grab temperature and humidity readings from a sensor and output them
+via BLE as a GATT server.  
+Additionally, the readings are shown on a Nokia 5110 Display.
+
+## Bill of Materials
+
+- ESP32 Dev Board
+
+- SHT21 Humidity and Temperature Sensor (a GY-21 module in my case)
+
+- Nokia 5110 Display
+
+- ESP-Prog JTAG Adapter (optional, useful for development)
+
+- Breadboard and cables as usual
+
+TODO LORIS: upload pic
+
+## High-Level Overview
+
+TODO LORIS
 
 ## Hardware Connection
 
@@ -40,7 +60,7 @@ The connection between ESP Board and the other components is as follows:
   |_____ESP32______|                      |__JTAG_Adapter__|
 ```
 
-The JTAG Adapter would of course be removed after development.
+The JTAG Adapter is of course be removed after development.
 
 ## BLE Setup
 
@@ -75,7 +95,7 @@ Allowed range is: 0.00 to 100.00
 A value of 0xFFFF represents ‘value is not known’.
 All other values are prohibited.
 
-## Lifecycle for BLE Events
+## BLE Events Lifecycle
 
 ```sh
 #
