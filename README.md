@@ -6,7 +6,10 @@ Additionally, the readings are shown on a Nokia 5110 Display.
 
 ## Bill of Materials
 
-- ESP32 Dev Board
+- ESP32-DevKitC V4
+
+  - features two 32-bit CPU cores, 4MB Flash, 520KB SRAM, Wi-Fi, Bluetooth LE,
+    and a whole bunch of peripherals
 
 - SHT21 Humidity and Temperature Sensor (a GY-21 module in my case)
 
@@ -16,7 +19,7 @@ Additionally, the readings are shown on a Nokia 5110 Display.
 
 - Breadboard and cables as usual
 
-TODO LORIS: upload pic
+TODO LORIS: upload picture
 
 ## High-Level Overview
 
@@ -62,40 +65,44 @@ The connection between ESP Board and the other components is as follows:
 
 The JTAG Adapter is of course be removed after development.
 
+## External Libraries
+
+- [sht21](https://github.com/dehre/sht21) - driver for the temperature and humidity sensor, which I wrote myself
+
+- [ssd1306](https://github.com/lexus2k/ssd1306) - driver for the Nokia 5110 display
+
 ## BLE Setup
 
-The sensor telemetry will be advertised over BLE as a GATT Environmental Sensing Service (GATT Assigned Number 0x181A) with multiple GATT Characteristics.
-Each Characteristic represents a sensor reading and contains the most current sensor value(s), for example, Temperature (0x2A6E) or Humidity (0x2A6F).
+The SHT21 sensor readings are advertised over BLE as a GATT Environmental Sensing Service (GATT Assigned Number 0x181A) with two GATT Characteristics.
+The service has two Characteristics, one representing temperature (0x2A6E) and one representing Humidity (0x2A6F).
 
-Each GATT Characteristic defines how the data should be represented.
-To represent the data accurately, the sensor readings need to be modified.
-For example, using the SHT21 library, the temperature is captured as floating point number.
-However, the Temperature GATT Characteristic (0x2A6E) requires a signed 16-bit value (-32,768 32,767).
-To maintain precision, the captured value (e.g., 22.21 °C) is multiplied by 100 to convert it to an integer (e.g., 2221). The ESP32 will then handle converting the value back to the original value with the correct precision.
+Each GATT Characteristic defines how the data should be represented:
 
-## Writing temperature and humidity to the BLE peripheral
+- _Temperature_
 
-**GATT Specification Supplement Datasheet Page 23 Section 2.1: Scalar Values**
-When a characteristic field represents a scalar value and unless otherwise specified by the characteristic
-definition, the represented value is related to the raw value by the following equations, where the M
-coefficient, d, and b exponents are defined per field of characteristic:
-R = C \* M \* 10^d \* 2^b
-
-**GATT Specification Supplement Datasheet Page 223 Section 3.204: Temperature**
-Represented values: M = 1, d = -2, b = 0
+The data type is a 16-bit signed integer.
 Unit is degrees Celsius with a resolution of 0.01 degrees Celsius.
 Allowed range is: -273.15 to 327.67.
-A value of 0x8000 represents ‘value is not known’.
+A value of 0x8000 represents 'value is not known'.
 All other values are prohibited.
+See `GATT Specification Supplement Datasheet Page 223 Section 3.204`.
 
-**GATT Specification Supplement Datasheet Page 146 Section 3.114: Humidity**
-Represented values: M = 1, d = -2, b = 0
+- _Humidity_
+
+The data type is a 16-bit unsigned integer.
 Unit is in percent with a resolution of 0.01 percent.
 Allowed range is: 0.00 to 100.00
-A value of 0xFFFF represents ‘value is not known’.
+A value of 0xFFFF represents 'value is not known'.
 All other values are prohibited.
+See `GATT Specification Supplement Datasheet Page 223 Section 3.204`.
+
+Using the `sht21` library, both temperature and humidity are retrieved as floating point numbers.
+The Temperature GATT Characteristic, however, requires a signed 16-bit value (-32768 32767), so the captured value (e.g. 9.87°C) is multiplied by 100, then converted to an integer (e.g. 987).  
+Similar reasoning goes for the Humidity GATT Characteristic.
 
 ## BLE Events Lifecycle
+
+This log shows the order in which BLE events are triggered when a BLE-client (i.e. smartphone) connects to the ESP32. It might be useful for debugging.
 
 ```sh
 #
@@ -118,7 +125,7 @@ W (17347) gatts_profile_event_handler: ESP_GATTS_MTU_EVT
 W (17677) gap_event_handler: ESP_GAP_BLE_UPDATE_CONN_PARAMS_EVT
 
 #
-# Reading characteristic 3 times
+# Reading temperature characteristic 3 times
 #
 
 W (20197) gatts_profile_event_handler: ESP_GATTS_READ_EVT
