@@ -4,6 +4,7 @@
 
 #include "lcd_manager.h"
 #include "ssd1306.h"
+#include <assert.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
@@ -42,6 +43,12 @@ static void initialize_my_font_6x8(void);
 
 static void clear_line(uint8_t x_pos, uint8_t y_pos);
 
+static void render_last_readings(void);
+
+static void render_historical_temperature(void);
+
+static void render_historical_humidity(void);
+
 //==================================================================================================
 // STATIC VARIABLES
 //==================================================================================================
@@ -54,6 +61,10 @@ static void clear_line(uint8_t x_pos, uint8_t y_pos);
  */
 static uint8_t my_font_6x8[MY_FONT_6x8_LEN];
 
+// TODO LORIS: replace them with ring buffers
+static float ringbuf_lcd_temperature;
+static float ringbuf_lcd_humidity;
+
 //==================================================================================================
 // GLOBAL FUNCTIONS
 //==================================================================================================
@@ -64,23 +75,37 @@ void lcd_manager_init(void)
     ssd1306_setFixedFont(my_font_6x8);
     pcd8544_84x48_spi_init(RST_PIN, CE_PIN, DC_PIN);
     ssd1306_clearScreen();
-    ssd1306_printFixed(8, 8, "Envi Sensor", STYLE_ITALIC);
 }
 
-void lcd_manager_write_temperature(float temperature)
+void lcd_manager_store_temperature(float temperature)
 {
-    clear_line(0, 24);
-    char line_buffer[SCREEN_WIDTH + 1];
-    snprintf(line_buffer, SCREEN_WIDTH + 1, "%-5s %.1f'C", "Temp:", temperature);
-    ssd1306_printFixed(0, 24, line_buffer, STYLE_NORMAL);
+    // TODO LORIS: push to buffer
+    ringbuf_lcd_temperature = temperature;
 }
 
-void lcd_manager_write_humidity(float humidity)
+void lcd_manager_store_humidity(float humidity)
 {
-    clear_line(0, 35);
-    char line_buffer[SCREEN_WIDTH + 1];
-    snprintf(line_buffer, SCREEN_WIDTH + 1, "%-5s %.1f %%", "Hum:", humidity);
-    ssd1306_printFixed(0, 35, line_buffer, STYLE_NORMAL);
+    // TODO LORIS: push to buffer
+    ringbuf_lcd_humidity = humidity;
+}
+
+// TODO LORIS: perhaps an enum for lcd_view?
+void lcd_manager_render(uint8_t lcd_view)
+{
+    if (lcd_view > 2)
+        return;
+
+    switch (lcd_view)
+    {
+    case 0:
+        return render_last_readings();
+    case 1:
+        return render_historical_temperature();
+    case 2:
+        return render_historical_humidity();
+    default:
+        assert(0);
+    }
 }
 
 //==================================================================================================
@@ -97,6 +122,7 @@ static void initialize_my_font_6x8(void)
     }
 }
 
+// TODO LORIS: need it?
 static void clear_line(uint8_t x_pos, uint8_t y_pos)
 {
     char line_buffer[SCREEN_WIDTH + 1] = {0};
@@ -105,4 +131,28 @@ static void clear_line(uint8_t x_pos, uint8_t y_pos)
         line_buffer[i] = ' ';
     }
     ssd1306_printFixed(x_pos, y_pos, line_buffer, STYLE_NORMAL);
+}
+
+static void render_last_readings(void)
+{
+    ssd1306_clearScreen();
+    ssd1306_printFixed(8, 8, "Envi Sensor", STYLE_ITALIC);
+
+    char line_buffer[SCREEN_WIDTH + 1];
+    snprintf(line_buffer, SCREEN_WIDTH + 1, "%-5s %.1f'C", "Temp:", ringbuf_lcd_temperature);
+    ssd1306_printFixed(0, 24, line_buffer, STYLE_NORMAL);
+    snprintf(line_buffer, SCREEN_WIDTH + 1, "%-5s %.1f %%", "Hum:", ringbuf_lcd_humidity);
+    ssd1306_printFixed(0, 32, line_buffer, STYLE_NORMAL);
+}
+
+static void render_historical_temperature(void)
+{
+    ssd1306_clearScreen();
+    ssd1306_printFixed(8, 8, "Temp Analysis", STYLE_ITALIC);
+}
+
+static void render_historical_humidity(void)
+{
+    ssd1306_clearScreen();
+    ssd1306_printFixed(8, 8, "Hum Analysis", STYLE_ITALIC);
 }

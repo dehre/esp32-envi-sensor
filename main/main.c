@@ -11,6 +11,8 @@
 #include "lcd_manager.h"
 #include "sht21.h"
 
+// TODO LORIS: check if there's an UNUSED macro, or create it yourself
+
 //==================================================================================================
 // DEFINES - MACROS
 //==================================================================================================
@@ -170,8 +172,8 @@ static void tt_update_lcd_ring_buffer(void *param)
         sensor_reading_t reading;
         if (xQueueReceive(binqueue_lcd, &reading, portMAX_DELAY))
         {
-            lcd_manager_write_temperature(reading.temperature);
-            lcd_manager_write_humidity(reading.humidity);
+            lcd_manager_store_temperature(reading.temperature);
+            lcd_manager_store_humidity(reading.humidity);
         }
     }
 }
@@ -201,7 +203,7 @@ static void tt_render_lcd_view(void *param)
     {
         while (!xSemaphoreTake(binsemaphore_lcd_render, portMAX_DELAY))
             ;
-        printf("About to re-render lcd with view #%d\n", lcd_view);
+        lcd_manager_render(lcd_view);
     }
 
     // TODO LORIS:
