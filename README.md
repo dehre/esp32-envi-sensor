@@ -1,8 +1,19 @@
 # ESP32 Envi Sensor
 
-Use an ESP32 board to grab temperature and humidity readings from a sensor and output them
-via BLE as a GATT server.  
-Additionally, the readings are shown on a Nokia 5110 Display.
+## Device Description
+
+The Envi Sensor (like it or not, that's its name) is a temperature and humidity reading device powered by an ESP32 board.
+
+Readings are grabbed every 30 seconds and displayed on the Nokia 5110 lcd screen;
+the switch allows the user to choose among three different views:
+
+1. show current temperature and humidity
+2. show max, min, and median temperature among the last 120 readings (last hour)
+3. show max, min, and median humidity among the last 120 readings (last hour)
+
+Finally, the Envi Sensor acts as a BLE (Bluetooth Low Energy) GATT Server, from which a smartphone (or any BLE-enabled device) can read the current temperature and humidity.
+
+TODO LORIS: upload picture
 
 ## Bill of Materials
 
@@ -11,19 +22,39 @@ Additionally, the readings are shown on a Nokia 5110 Display.
   - features two 32-bit CPU cores, 4MB Flash, 520KB SRAM, Wi-Fi, Bluetooth LE,
     and a whole bunch of peripherals
 
-- SHT21 Humidity and Temperature Sensor (a GY-21 module in my case)
+- SHT21 Humidity and Temperature Sensor (a GY-21 module in my case), communicating over I2C
 
-- Nokia 5110 Display
+- Nokia 5110 Display, communicating over SPI
+
+- Normally Open Push Button, set up in negative logic using the ESP32 internal pull-up resistor
 
 - ESP-Prog JTAG Adapter (optional, useful for development)
 
 - Breadboard and cables as usual
 
-TODO LORIS: upload picture
+## Device Description
 
-## High-Level Overview
+## Tasks Overview
 
-TODO LORIS
+To understand how the different parts of the system work with each other, it's useful to know what each FreeRTOS Task is responsible for:
+
+- `tt_read_sensor`: periodically reads temperature and humidity from the SHT21 sensor and writes them to the binary queues `binqueue_ble` and `binqueue_lcd`
+
+- `tt_update_ble`: waits for `binqueue_ble` to hold new data, gets it, and updates the temperature/humidity BLE GATT characteristics
+
+- `tt_update_lcd_ring_buffer`: waits for `binqueue_ble` to hold new data, gets it, and writes it to the ring-buffers `ringbuf_lcd_temperature` and `ringbuf_lcd_humidity`, which hold the last 120 readings
+
+- `tt_read_lcd_switch`: waits from a falling edge, debounces the switch, increments the counter `lcd_view`, and signals the binary semaphore `binsemaphore_lcd_view`
+
+- `tt_refresh_lcd_view`: waits for `binsemaphore_lcd_view`, reads the updated counter `lcd_view`, and renders the new view on the lcd
+
+In addition:
+
+- the module `ble_manager` takes care of the entire Bluetooth setup, abstracting all the details from `tt_update_ble`
+
+- the module `lcd_manager` takes care of rendering the views using the data from `ringbuf_lcd_temperature` and `ringbuf_lcd_humidity`
+
+TODO LORIS: who's responsible to keep the lcd views updated, when new sensor data come in?
 
 ## Hardware Connection
 
@@ -51,6 +82,13 @@ The connection between ESP Board and the other components is as follows:
   |             GND|______________________|GND             |
   |                |                      |                |
   |                |                      |_Nokia_5110_LCD_|
+  |                |
+  |                |                       ________________
+  |                |                      |                |
+  |              ??|______________________|A               |
+  |             GND|______________________|B    __/__      |
+  |                |                      |                |
+  |                |                      |__Push_Button___|
   |                |
   |                |                       ________________
   |                |                      |                |
