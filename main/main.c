@@ -23,14 +23,14 @@
 
 #define READ_SENSOR_FREQUENCY_MS 5000
 
-#define MAIN_TASK_PRIORITY 1                          // for reference
-#define MAX_TASK_PRIORITY (configMAX_PRIORITIES - 1U) // for reference
+#define TT_PRIORITY_MAIN 1                          // priority of main task, for reference
+#define TT_PRIORITY_MAX (configMAX_PRIORITIES - 1U) // max priority that can be assigned, for reference
 
-#define READ_SENSOR_TASK_PRIORITY 2
-#define READ_MONITOR_SWITCH_TASK_PRIORITY 2
-#define REFRESH_MONITOR_VIEW_TASK_PRIORITY 2
-#define UPDATE_MONITOR_RING_BUFFER_TASK_PRIORITY 2
-#define UPDATE_BLE_TASK_PRIORITY 2
+#define TT_PRIORITY_READ_SENSOR 2
+#define TT_PRIORITY_UPDATE_BLE 2
+#define TT_PRIORITY_UPDATE_LCD_RING_BUFFER 2
+#define TT_PRIORITY_READ_LCD_SWITCH 2
+#define TT_PRIORITY_RENDER_LCD_VIEW 2
 
 //==================================================================================================
 // ENUMS - STRUCTS - TYPEDEFS
@@ -46,32 +46,33 @@ typedef struct
 // STATIC PROTOTYPES
 //==================================================================================================
 
-// TODO LORIS: rename tasks to task_read_sensor, task_read_switch, ...
-static void read_sensor_task(void *param);
+static void create_task(TaskFunction_t task_fn, const char *const task_name, UBaseType_t priority);
 
-static void read_monitor_switch_task(void *param);
+static void tt_read_sensor(void *param);
 
-static void refresh_monitor_view_task(void *param);
+static void tt_update_ble(void *param);
 
-static void update_monitor_ring_buffer(void *param);
+static void tt_update_lcd_ring_buffer(void *param);
 
-static void update_ble_task(void *param);
+static void tt_read_lcd_switch(void *param);
+
+static void tt_render_lcd_view(void *param);
 
 //==================================================================================================
 // STATIC VARIABLES
 //==================================================================================================
 
-// monitor_view 0, 1, 2 determine which view is rendered on the lcd
-static uint8_t monitor_view = 0;
+// pass sensor readings from the sensor to the BLE peripheral
+static QueueHandle_t binqueue_ble = NULL;
 
-// monitor_view_updated informs a task when the monitor_view has been updated
-static SemaphoreHandle_t monitor_view_updated = NULL;
+// pass sensor readings from the sensor to the onboard monitor
+static QueueHandle_t binqueue_lcd = NULL;
 
-// Pass sensor readings from the sensor to the onboard monitor
-static QueueHandle_t mailbox_monitor = NULL;
+// lcd_view 0, 1, 2 determine which view is rendered on the lcd
+static uint8_t lcd_view = 0;
 
-// Pass sensor readings from the sensor to the BLE peripheral
-static QueueHandle_t mailbox_ble = NULL;
+// binsemaphore_lcd_view informs a task when the lcd_view has been updated
+static SemaphoreHandle_t binsemaphore_lcd_view = NULL;
 
 //==================================================================================================
 // GLOBAL FUNCTIONS
@@ -83,35 +84,15 @@ void app_main(void)
     ESP_ERROR_CHECK(ble_manager_init());
     nokia_5110_lcd_init();
 
-    monitor_view_updated = xSemaphoreCreateBinary();
-    mailbox_monitor = xQueueCreate(1, sizeof(sensor_reading_t));
-    mailbox_ble = xQueueCreate(1, sizeof(sensor_reading_t));
+    binqueue_ble = xQueueCreate(1, sizeof(sensor_reading_t));
+    binqueue_lcd = xQueueCreate(1, sizeof(sensor_reading_t));
+    binsemaphore_lcd_view = xSemaphoreCreateBinary();
 
-    // TODO LORIS: fn for creating task
-    TaskHandle_t periodic_task_handle = NULL;
-    xTaskCreate(&read_sensor_task, "read_sensor_task", TASK_STACK_DEPTH, NULL, READ_SENSOR_TASK_PRIORITY,
-                &periodic_task_handle);
-    configASSERT(periodic_task_handle);
-
-    TaskHandle_t read_monitor_switch_task_handle = NULL;
-    xTaskCreate(&read_monitor_switch_task, "read_monitor_switch_task", TASK_STACK_DEPTH, NULL,
-                READ_MONITOR_SWITCH_TASK_PRIORITY, &read_monitor_switch_task_handle);
-    configASSERT(read_monitor_switch_task_handle);
-
-    TaskHandle_t refresh_monitor_view_task_handle = NULL;
-    xTaskCreate(&refresh_monitor_view_task, "refresh_monitor_view_task", TASK_STACK_DEPTH, NULL,
-                REFRESH_MONITOR_VIEW_TASK_PRIORITY, &refresh_monitor_view_task_handle);
-    configASSERT(refresh_monitor_view_task_handle);
-
-    TaskHandle_t update_monitor_ring_buffer_handle = NULL;
-    xTaskCreate(&update_monitor_ring_buffer, "update_monitor_ring_buffer", TASK_STACK_DEPTH, NULL,
-                UPDATE_MONITOR_RING_BUFFER_TASK_PRIORITY, &update_monitor_ring_buffer_handle);
-    configASSERT(update_monitor_ring_buffer_handle);
-
-    TaskHandle_t update_ble_task_handle = NULL;
-    xTaskCreate(&update_ble_task, "update_ble_task", TASK_STACK_DEPTH, NULL, UPDATE_BLE_TASK_PRIORITY,
-                &update_ble_task_handle);
-    configASSERT(update_ble_task_handle);
+    create_task(tt_read_sensor, "tt_read_sensor", TT_PRIORITY_READ_SENSOR);
+    create_task(tt_update_ble, "tt_update_ble", TT_PRIORITY_UPDATE_BLE);
+    create_task(tt_update_lcd_ring_buffer, "tt_update_lcd_ring_buffer", TT_PRIORITY_UPDATE_LCD_RING_BUFFER);
+    create_task(tt_read_lcd_switch, "tt_read_lcd_switch", TT_PRIORITY_READ_LCD_SWITCH);
+    create_task(tt_render_lcd_view, "tt_render_lcd_view", TT_PRIORITY_RENDER_LCD_VIEW);
 
     vTaskDelete(NULL);
 }
@@ -120,7 +101,14 @@ void app_main(void)
 // STATIC FUNCTIONS
 //==================================================================================================
 
-static void read_sensor_task(void *param)
+static void create_task(TaskFunction_t task_fn, const char *const task_name, UBaseType_t priority)
+{
+    TaskHandle_t task_handle = NULL;
+    xTaskCreate(task_fn, task_name, TASK_STACK_DEPTH, NULL, priority, &task_handle);
+    configASSERT(task_handle);
+}
+
+static void tt_read_sensor(void *param)
 {
     (void)param;
     const TickType_t frequency = READ_SENSOR_FREQUENCY_MS / portTICK_PERIOD_MS;
@@ -140,29 +128,55 @@ static void read_sensor_task(void *param)
             IFERR_LOG(err, "could not read humidity");
             continue;
         }
-
         if (humidity_reading < 0)
             humidity_reading = 0;
         if (humidity_reading > 100)
             humidity_reading = 100;
 
         sensor_reading_t reading = {.temperature = temperature_reading, .humidity = humidity_reading};
-        if (xQueueSend(mailbox_monitor, (void *)&reading, portMAX_DELAY) != pdPASS)
-        {
-            ESP_LOGW(ESP_LOG_TAG, "last sensor reading not received from monitor, overwriting with new value");
-            configASSERT(xQueueOverwrite(mailbox_monitor, (void *)&reading));
-        }
-        if (xQueueSend(mailbox_ble, (void *)&reading, portMAX_DELAY) != pdPASS)
+        if (xQueueSend(binqueue_ble, (void *)&reading, portMAX_DELAY) != pdPASS)
         {
             ESP_LOGW(ESP_LOG_TAG, "last sensor reading not received from BLE peripheral, overwriting with new value");
-            configASSERT(xQueueOverwrite(mailbox_ble, (void *)&reading));
+            configASSERT(xQueueOverwrite(binqueue_ble, (void *)&reading));
         }
-
+        if (xQueueSend(binqueue_lcd, (void *)&reading, portMAX_DELAY) != pdPASS)
+        {
+            ESP_LOGW(ESP_LOG_TAG, "last sensor reading not received from monitor, overwriting with new value");
+            configASSERT(xQueueOverwrite(binqueue_lcd, (void *)&reading));
+        }
         vTaskDelayUntil(&lastWakeTime, frequency);
     }
 }
 
-static void read_monitor_switch_task(void *param)
+static void tt_update_ble(void *param)
+{
+    (void)param;
+    while (1)
+    {
+        sensor_reading_t reading;
+        if (xQueueReceive(binqueue_ble, &reading, portMAX_DELAY))
+        {
+            IFERR_LOG(ble_manager_write_temperature(reading.temperature), "failed to write temperature");
+            IFERR_LOG(ble_manager_write_humidity(reading.humidity), "failed to write humidity");
+        }
+    }
+}
+
+static void tt_update_lcd_ring_buffer(void *param)
+{
+    (void)param;
+    while (1)
+    {
+        sensor_reading_t reading;
+        if (xQueueReceive(binqueue_lcd, &reading, portMAX_DELAY))
+        {
+            nokia_5110_lcd_write_temperature(reading.temperature);
+            nokia_5110_lcd_write_humidity(reading.humidity);
+        }
+    }
+}
+
+static void tt_read_lcd_switch(void *param)
 {
     (void)param;
     // TODO LORIS:
@@ -174,52 +188,24 @@ static void read_monitor_switch_task(void *param)
     while (1)
     {
         vTaskDelay(2000 / portTICK_PERIOD_MS);
-        monitor_view = (monitor_view + 1) % 3;
-        BaseType_t given = xSemaphoreGive(monitor_view_updated);
+        lcd_view = (lcd_view + 1) % 3;
+        BaseType_t given = xSemaphoreGive(binsemaphore_lcd_view);
         configASSERT(given);
     }
 }
 
-static void refresh_monitor_view_task(void *param)
+static void tt_render_lcd_view(void *param)
 {
     (void)param;
     while (1)
     {
-        while (!xSemaphoreTake(monitor_view_updated, portMAX_DELAY))
+        while (!xSemaphoreTake(binsemaphore_lcd_view, portMAX_DELAY))
             ;
-        printf("About to re-render lcd with view #%d\n", monitor_view);
+        printf("About to re-render lcd with view #%d\n", lcd_view);
     }
 
     // TODO LORIS:
     // wait for semaphore signal
     // read count -> mutex
     // render screen
-}
-
-static void update_monitor_ring_buffer(void *param)
-{
-    (void)param;
-    while (1)
-    {
-        sensor_reading_t reading;
-        if (xQueueReceive(mailbox_monitor, &reading, portMAX_DELAY))
-        {
-            nokia_5110_lcd_write_temperature(reading.temperature);
-            nokia_5110_lcd_write_humidity(reading.humidity);
-        }
-    }
-}
-
-static void update_ble_task(void *param)
-{
-    (void)param;
-    while (1)
-    {
-        sensor_reading_t reading;
-        if (xQueueReceive(mailbox_ble, &reading, portMAX_DELAY))
-        {
-            IFERR_LOG(ble_manager_write_temperature(reading.temperature), "failed to write temperature");
-            IFERR_LOG(ble_manager_write_humidity(reading.humidity), "failed to write humidity");
-        }
-    }
 }

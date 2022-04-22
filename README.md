@@ -46,7 +46,7 @@ To understand how the different parts of the system work with each other, it's u
 
 - `tt_read_lcd_switch`: waits from a falling edge, debounces the switch, increments the counter `lcd_view`, and signals the binary semaphore `binsemaphore_lcd_view`
 
-- `tt_refresh_lcd_view`: waits for `binsemaphore_lcd_view`, reads the updated counter `lcd_view`, and renders the new view on the lcd
+- `tt_render_lcd_view`: waits for `binsemaphore_lcd_view`, reads the updated counter `lcd_view`, and renders the new view on the lcd
 
 In addition:
 
