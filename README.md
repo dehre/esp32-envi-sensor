@@ -42,19 +42,17 @@ To understand how the different parts of the system work with each other, it's u
 
 - `tt_update_ble`: waits for `binqueue_ble` to hold new data, gets it, and updates the temperature/humidity BLE GATT characteristics
 
-- `tt_update_lcd_ring_buffer`: waits for `binqueue_ble` to hold new data, gets it, and writes it to the ring-buffers `ringbuf_lcd_temperature` and `ringbuf_lcd_humidity`, which hold the last 120 readings
+- `tt_update_lcd_ring_buffer`: waits for `binqueue_ble` to hold new data, gets it, writes it to the ring-buffers `ringbuf_lcd_temperature` and `ringbuf_lcd_humidity` (which hold the last 120 readings), and signals `binsemaphore_lcd_render`
 
-- `tt_read_lcd_switch`: waits from a falling edge, debounces the switch, increments the counter `lcd_view`, and signals the binary semaphore `binsemaphore_lcd_view`
+- `tt_read_lcd_switch`: waits from a falling edge, debounces the switch, increments the counter `lcd_view`, and signals the binary semaphore `binsemaphore_lcd_render`
 
-- `tt_render_lcd_view`: waits for `binsemaphore_lcd_view`, reads the updated counter `lcd_view`, and renders the new view on the lcd
+- `tt_render_lcd_view`: waits for `binsemaphore_lcd_render`, reads the counter `lcd_view`, and renders the appropriate view on the lcd
 
 In addition:
 
 - the module `ble_manager` takes care of the entire Bluetooth setup, abstracting all the details from `tt_update_ble`
 
 - the module `lcd_manager` takes care of rendering the views using the data from `ringbuf_lcd_temperature` and `ringbuf_lcd_humidity`
-
-TODO LORIS: who's responsible to keep the lcd views updated, when new sensor data come in?
 
 ## Hardware Connection
 

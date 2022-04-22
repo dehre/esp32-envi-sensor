@@ -71,8 +71,8 @@ static QueueHandle_t binqueue_lcd = NULL;
 // lcd_view 0, 1, 2 determine which view is rendered on the lcd
 static uint8_t lcd_view = 0;
 
-// binsemaphore_lcd_view informs a task when the lcd_view has been updated
-static SemaphoreHandle_t binsemaphore_lcd_view = NULL;
+// binsemaphore_lcd_render informs a task when the lcd_view has been updated
+static SemaphoreHandle_t binsemaphore_lcd_render = NULL;
 
 //==================================================================================================
 // GLOBAL FUNCTIONS
@@ -86,7 +86,7 @@ void app_main(void)
 
     binqueue_ble = xQueueCreate(1, sizeof(sensor_reading_t));
     binqueue_lcd = xQueueCreate(1, sizeof(sensor_reading_t));
-    binsemaphore_lcd_view = xSemaphoreCreateBinary();
+    binsemaphore_lcd_render = xSemaphoreCreateBinary();
 
     create_task(tt_read_sensor, "tt_read_sensor", TT_PRIORITY_READ_SENSOR);
     create_task(tt_update_ble, "tt_update_ble", TT_PRIORITY_UPDATE_BLE);
@@ -189,7 +189,7 @@ static void tt_read_lcd_switch(void *param)
     {
         vTaskDelay(2000 / portTICK_PERIOD_MS);
         lcd_view = (lcd_view + 1) % 3;
-        BaseType_t given = xSemaphoreGive(binsemaphore_lcd_view);
+        BaseType_t given = xSemaphoreGive(binsemaphore_lcd_render);
         configASSERT(given);
     }
 }
@@ -199,7 +199,7 @@ static void tt_render_lcd_view(void *param)
     (void)param;
     while (1)
     {
-        while (!xSemaphoreTake(binsemaphore_lcd_view, portMAX_DELAY))
+        while (!xSemaphoreTake(binsemaphore_lcd_render, portMAX_DELAY))
             ;
         printf("About to re-render lcd with view #%d\n", lcd_view);
     }
