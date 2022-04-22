@@ -2,7 +2,7 @@
 // INCLUDES
 //==================================================================================================
 
-#include "nokia_5110_lcd.h"
+#include "lcd_manager.h"
 #include "ssd1306.h"
 #include <stdint.h>
 #include <stdio.h>
@@ -58,7 +58,7 @@ static uint8_t my_font_6x8[MY_FONT_6x8_LEN];
 // GLOBAL FUNCTIONS
 //==================================================================================================
 
-void nokia_5110_lcd_init(void)
+void lcd_manager_init(void)
 {
     initialize_my_font_6x8();
     ssd1306_setFixedFont(my_font_6x8);
@@ -67,7 +67,7 @@ void nokia_5110_lcd_init(void)
     ssd1306_printFixed(8, 8, "Envi Sensor", STYLE_ITALIC);
 }
 
-void nokia_5110_lcd_write_temperature(float temperature)
+void lcd_manager_write_temperature(float temperature)
 {
     clear_line(0, 24);
     char line_buffer[SCREEN_WIDTH + 1];
@@ -75,7 +75,7 @@ void nokia_5110_lcd_write_temperature(float temperature)
     ssd1306_printFixed(0, 24, line_buffer, STYLE_NORMAL);
 }
 
-void nokia_5110_lcd_write_humidity(float humidity)
+void lcd_manager_write_humidity(float humidity)
 {
     clear_line(0, 35);
     char line_buffer[SCREEN_WIDTH + 1];

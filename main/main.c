@@ -8,7 +8,7 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/queue.h"
 #include "freertos/task.h"
-#include "nokia_5110_lcd.h"
+#include "lcd_manager.h"
 #include "sht21.h"
 
 //==================================================================================================
@@ -82,7 +82,7 @@ void app_main(void)
 {
     ESP_ERROR_CHECK(sht21_init(0, GPIO_NUM_32, GPIO_NUM_33, sht21_i2c_speed_standard));
     ESP_ERROR_CHECK(ble_manager_init());
-    nokia_5110_lcd_init();
+    lcd_manager_init();
 
     binqueue_ble = xQueueCreate(1, sizeof(sensor_reading_t));
     binqueue_lcd = xQueueCreate(1, sizeof(sensor_reading_t));
@@ -170,8 +170,8 @@ static void tt_update_lcd_ring_buffer(void *param)
         sensor_reading_t reading;
         if (xQueueReceive(binqueue_lcd, &reading, portMAX_DELAY))
         {
-            nokia_5110_lcd_write_temperature(reading.temperature);
-            nokia_5110_lcd_write_humidity(reading.humidity);
+            lcd_manager_write_temperature(reading.temperature);
+            lcd_manager_write_humidity(reading.humidity);
         }
     }
 }
