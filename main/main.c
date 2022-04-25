@@ -23,7 +23,8 @@
 // TODO LORIS: can the value be lower?
 #define TASK_STACK_DEPTH 2048
 
-#define READ_SENSOR_FREQUENCY_MS 5000
+// TODO LORIS: put this #define in main.h and update to 5000
+#define READ_SENSOR_FREQUENCY_MS 500
 
 #define TT_PRIORITY_MAIN 1                          // priority of main task, for reference
 #define TT_PRIORITY_MAX (configMAX_PRIORITIES - 1U) // max priority that can be assigned, for reference

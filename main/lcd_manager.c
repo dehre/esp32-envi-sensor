@@ -36,7 +36,8 @@
 #define CE_PIN 5   // Chip Enable
 #define RST_PIN 16 // Reset
 
-#define ringbuf_lcd_data_len_ 120
+// TODO LORIS: put this #define in main.h and update to 120
+#define ringbuf_lcd_data_len_ 40
 
 //==================================================================================================
 // ENUMS - STRUCTS - TYPEDEFS
@@ -146,37 +147,70 @@ static void clear_line(uint8_t x_pos, uint8_t y_pos)
 
 static void render_last_readings(void)
 {
-    float last_temperature_reading;
-    float last_humidity_reading;
-    if (ringbuf_get(&ringbuf_lcd_temperature, &last_temperature_reading) == 0)
-    {
-        ESP_LOGE(ESP_LOG_TAG, "failed to retrieve temperature from ring-buffer");
-        return;
-    }
-    if (ringbuf_get(&ringbuf_lcd_humidity, &last_humidity_reading) == 0)
-    {
-        ESP_LOGE(ESP_LOG_TAG, "failed to retrieve humidity from ring-buffer");
-        return;
-    }
-
     ssd1306_clearScreen();
-    ssd1306_printFixed(8, 8, "Envi Sensor", STYLE_ITALIC);
+    ssd1306_printFixed(24, 0, "Envi", STYLE_ITALIC);
+    ssd1306_printFixed(24, 8, "Sensor", STYLE_ITALIC);
+
+    float temperature;
+    float humidity;
+    uint8_t success = 0x01;
+    success &= ringbuf_get(&ringbuf_lcd_temperature, &temperature);
+    success &= ringbuf_get(&ringbuf_lcd_humidity, &humidity);
+    if (success == 0)
+    {
+        ssd1306_printFixed(0, 24, "No data yet", STYLE_NORMAL);
+        return;
+    }
 
     char line_buffer[SCREEN_WIDTH + 1];
-    snprintf(line_buffer, SCREEN_WIDTH + 1, "%-5s %.1f'C", "Temp:", last_temperature_reading);
+    snprintf(line_buffer, SCREEN_WIDTH + 1, "%-5s %.1f'C", "Temp:", temperature);
     ssd1306_printFixed(0, 24, line_buffer, STYLE_NORMAL);
-    snprintf(line_buffer, SCREEN_WIDTH + 1, "%-5s %.1f %%", "Hum:", last_humidity_reading);
+    snprintf(line_buffer, SCREEN_WIDTH + 1, "%-5s %.1f %%", "Hum:", humidity);
     ssd1306_printFixed(0, 32, line_buffer, STYLE_NORMAL);
 }
 
 static void render_historical_temperature(void)
 {
     ssd1306_clearScreen();
-    ssd1306_printFixed(8, 8, "Temp Analysis", STYLE_ITALIC);
+    ssd1306_printFixed(8, 0, "Temperature", STYLE_ITALIC);
+    ssd1306_printFixed(16, 8, "Analysis", STYLE_ITALIC);
+
+    float sorted_temps[ringbuf_lcd_data_len_];
+    size_t sorted_temps_len = ringbuf_getallsorted(&ringbuf_lcd_temperature, sorted_temps);
+    if (sorted_temps_len == 0)
+    {
+        ssd1306_printFixed(0, 24, "No data yet", STYLE_NORMAL);
+        return;
+    }
+
+    char line_buffer[SCREEN_WIDTH + 1];
+    snprintf(line_buffer, SCREEN_WIDTH + 1, "%-5s %.1f'C", "Min:", sorted_temps[0]);
+    ssd1306_printFixed(0, 24, line_buffer, STYLE_NORMAL);
+    snprintf(line_buffer, SCREEN_WIDTH + 1, "%-5s %.1f'C", "Avg:", sorted_temps[((sorted_temps_len - 1) / 2)]);
+    ssd1306_printFixed(0, 32, line_buffer, STYLE_NORMAL);
+    snprintf(line_buffer, SCREEN_WIDTH + 1, "%-5s %.1f'C", "Max:", sorted_temps[(sorted_temps_len - 1)]);
+    ssd1306_printFixed(0, 40, line_buffer, STYLE_NORMAL);
 }
 
 static void render_historical_humidity(void)
 {
     ssd1306_clearScreen();
-    ssd1306_printFixed(8, 8, "Hum Analysis", STYLE_ITALIC);
+    ssd1306_printFixed(16, 0, "Humidity", STYLE_ITALIC);
+    ssd1306_printFixed(16, 8, "Analysis", STYLE_ITALIC);
+
+    float sorted_humids[ringbuf_lcd_data_len_];
+    size_t sorted_humids_len = ringbuf_getallsorted(&ringbuf_lcd_humidity, sorted_humids);
+    if (sorted_humids_len == 0)
+    {
+        ssd1306_printFixed(0, 24, "No data yet", STYLE_NORMAL);
+        return;
+    }
+
+    char line_buffer[SCREEN_WIDTH + 1];
+    snprintf(line_buffer, SCREEN_WIDTH + 1, "%-5s %.1f'C", "Min:", sorted_humids[0]);
+    ssd1306_printFixed(0, 24, line_buffer, STYLE_NORMAL);
+    snprintf(line_buffer, SCREEN_WIDTH + 1, "%-5s %.1f'C", "Avg:", sorted_humids[((sorted_humids_len - 1) / 2)]);
+    ssd1306_printFixed(0, 32, line_buffer, STYLE_NORMAL);
+    snprintf(line_buffer, SCREEN_WIDTH + 1, "%-5s %.1f'C", "Max:", sorted_humids[(sorted_humids_len - 1)]);
+    ssd1306_printFixed(0, 40, line_buffer, STYLE_NORMAL);
 }
