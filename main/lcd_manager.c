@@ -3,7 +3,10 @@
 //==================================================================================================
 
 #include "lcd_manager.h"
+#include "ringbuf.h"
 #include "ssd1306.h"
+
+#include "esp_log.h"
 #include <assert.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -12,6 +15,8 @@
 //==================================================================================================
 // DEFINES - MACROS
 //==================================================================================================
+
+#define ESP_LOG_TAG "LCD_MANAGER"
 
 #define MY_FONT_6x8_LEN 581 // enough memory to hold a copy of ssd1306xled_font6x8
 #define APOSTROPHE_IDX 46   // index of `'` in ssd1306xled_font6x8
@@ -30,6 +35,8 @@
 #define DC_PIN 17  // Data Command
 #define CE_PIN 5   // Chip Enable
 #define RST_PIN 16 // Reset
+
+#define ringbuf_lcd_data_len_ 120
 
 //==================================================================================================
 // ENUMS - STRUCTS - TYPEDEFS
@@ -61,9 +68,13 @@ static void render_historical_humidity(void);
  */
 static uint8_t my_font_6x8[MY_FONT_6x8_LEN];
 
-// TODO LORIS: replace them with ring buffers
-static float ringbuf_lcd_temperature;
-static float ringbuf_lcd_humidity;
+/* Ring-buffers for temperature and humidity */
+static ringbuf ringbuf_lcd_temperature;
+static ringbuf ringbuf_lcd_humidity;
+
+/* Memory reserved for holding ring-buffers' data */
+static float ringbuf_lcd_temperature_data_[ringbuf_lcd_data_len_];
+static float ringbuf_lcd_humidity_data_[ringbuf_lcd_data_len_];
 
 //==================================================================================================
 // GLOBAL FUNCTIONS
@@ -71,6 +82,8 @@ static float ringbuf_lcd_humidity;
 
 void lcd_manager_init(void)
 {
+    ringbuf_lcd_temperature = ringbuf_init(ringbuf_lcd_temperature_data_, ringbuf_lcd_data_len_);
+    ringbuf_lcd_humidity = ringbuf_init(ringbuf_lcd_humidity_data_, ringbuf_lcd_data_len_);
     initialize_my_font_6x8();
     ssd1306_setFixedFont(my_font_6x8);
     pcd8544_84x48_spi_init(RST_PIN, CE_PIN, DC_PIN);
@@ -79,14 +92,12 @@ void lcd_manager_init(void)
 
 void lcd_manager_store_temperature(float temperature)
 {
-    // TODO LORIS: push to buffer
-    ringbuf_lcd_temperature = temperature;
+    ringbuf_put(&ringbuf_lcd_temperature, temperature);
 }
 
 void lcd_manager_store_humidity(float humidity)
 {
-    // TODO LORIS: push to buffer
-    ringbuf_lcd_humidity = humidity;
+    ringbuf_put(&ringbuf_lcd_humidity, humidity);
 }
 
 // TODO LORIS: perhaps an enum for lcd_view?
@@ -135,13 +146,26 @@ static void clear_line(uint8_t x_pos, uint8_t y_pos)
 
 static void render_last_readings(void)
 {
+    float last_temperature_reading;
+    float last_humidity_reading;
+    if (ringbuf_get(&ringbuf_lcd_temperature, &last_temperature_reading) == 0)
+    {
+        ESP_LOGE(ESP_LOG_TAG, "failed to retrieve temperature from ring-buffer");
+        return;
+    }
+    if (ringbuf_get(&ringbuf_lcd_humidity, &last_humidity_reading) == 0)
+    {
+        ESP_LOGE(ESP_LOG_TAG, "failed to retrieve humidity from ring-buffer");
+        return;
+    }
+
     ssd1306_clearScreen();
     ssd1306_printFixed(8, 8, "Envi Sensor", STYLE_ITALIC);
 
     char line_buffer[SCREEN_WIDTH + 1];
-    snprintf(line_buffer, SCREEN_WIDTH + 1, "%-5s %.1f'C", "Temp:", ringbuf_lcd_temperature);
+    snprintf(line_buffer, SCREEN_WIDTH + 1, "%-5s %.1f'C", "Temp:", last_temperature_reading);
     ssd1306_printFixed(0, 24, line_buffer, STYLE_NORMAL);
-    snprintf(line_buffer, SCREEN_WIDTH + 1, "%-5s %.1f %%", "Hum:", ringbuf_lcd_humidity);
+    snprintf(line_buffer, SCREEN_WIDTH + 1, "%-5s %.1f %%", "Hum:", last_humidity_reading);
     ssd1306_printFixed(0, 32, line_buffer, STYLE_NORMAL);
 }
 

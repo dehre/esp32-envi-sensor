@@ -7,19 +7,19 @@
  * ```c
  * #include "ringbuf.h"
  *
- * static float ringbuf_storage[20];
+ * static float ringbuf_data_[20];
  *
  * int main(void)
  * {
- *     ringbuf rbuf = ringbuf_init(ringbuf_storage, 20);
+ *     ringbuf rbuf = ringbuf_init(ringbuf_data_, 20);
  *
  *     ringbuf_put(&rbuf, 5);
  *
- *     float get_value;
- *     ringbuf_get(&rbuf, &get_value);
+ *     float value;
+ *     ringbuf_get(&rbuf, &value);
  *
- *     float get_all_values[20];
- *     ringbuf_getallsorted(&rbuf, get_all_values);
+ *     float all_values[20];
+ *     ringbuf_getallsorted(&rbuf, all_values);
  * }
  * ```
  */

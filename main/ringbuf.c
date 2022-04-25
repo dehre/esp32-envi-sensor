@@ -4,16 +4,11 @@
 
 #include "ringbuf.h"
 #include <math.h>
-#include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
 
 //==================================================================================================
 // DEFINES - MACROS
 //==================================================================================================
-
-// TODO LORIS: move into lcd_manager
-#define ringbuf_storage_capacity 20
 
 /* These defines help with operators' precedence without cluttering the code too
  * much */
@@ -34,9 +29,6 @@ static int compare_floats(const void *a, const void *b);
 //==================================================================================================
 // STATIC VARIABLES
 //==================================================================================================
-
-// TODO LORIS: move into lcd_manager
-static float ringbuf_storage[ringbuf_storage_capacity];
 
 //==================================================================================================
 // GLOBAL FUNCTIONS
