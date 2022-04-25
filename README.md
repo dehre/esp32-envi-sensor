@@ -175,3 +175,12 @@ W (23587) gatts_profile_event_handler: ESP_GATTS_READ_EVT
 W (27577) gatts_profile_event_handler: ESP_GATTS_DISCONNECT_EVT
 W (27597) gap_event_handler: ESP_GAP_BLE_ADV_START_COMPLETE_EVT
 ```
+
+## Running Tests
+
+```sh
+get_idf # if not done already
+cd test
+idf.py build
+idf.py -p <port> flash monitor
+```

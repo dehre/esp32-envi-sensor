@@ -1,5 +1,5 @@
 set(main_DIR ../../main)
-set(main_c_SRCS ${main_DIR}/utils.c )
+set(main_c_SRCS ${main_DIR}/utils.c ${main_DIR}/ringbuf.c)
 set(main_include_DIRS ${main_DIR}/include)
 
 set(test_c_SRCS unit_tests.c)
