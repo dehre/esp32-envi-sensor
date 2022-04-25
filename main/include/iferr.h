@@ -24,7 +24,7 @@
 #define IFERR_LOG(x, format, args...)                                                                                  \
     ({                                                                                                                 \
         esp_err_t err_rc_ = (x);                                                                                       \
-        if ((err_rc_ != ESP_OK))                                                                                       \
+        if (err_rc_ != ESP_OK)                                                                                         \
         {                                                                                                              \
             ESP_LOGE(ESP_LOG_TAG, "%s - " format ", error = %s", __func__, ##args, esp_err_to_name(err_rc_));          \
         }                                                                                                              \
@@ -36,7 +36,7 @@
 #define IFERR_RETV(x, format, args...)                                                                                 \
     ({                                                                                                                 \
         esp_err_t err_rc_ = (x);                                                                                       \
-        if ((err_rc_ != ESP_OK))                                                                                       \
+        if (err_rc_ != ESP_OK)                                                                                         \
         {                                                                                                              \
             ESP_LOGE(ESP_LOG_TAG, "%s - " format ", error = %s", __func__, ##args, esp_err_to_name(err_rc_));          \
             return;                                                                                                    \
@@ -49,7 +49,7 @@
 #define IFERR_RETE(x, format, args...)                                                                                 \
     ({                                                                                                                 \
         esp_err_t err_rc_ = (x);                                                                                       \
-        if ((err_rc_ != ESP_OK))                                                                                       \
+        if (err_rc_ != ESP_OK)                                                                                         \
         {                                                                                                              \
             ESP_LOGE(ESP_LOG_TAG, "%s - " format ", error = %s", __func__, ##args, esp_err_to_name(err_rc_));          \
             return err_rc_;                                                                                            \
