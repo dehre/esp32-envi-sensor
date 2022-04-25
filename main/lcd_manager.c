@@ -149,7 +149,7 @@ static void render_last_readings(void)
 {
     ssd1306_clearScreen();
     ssd1306_printFixed(24, 0, "Envi", STYLE_ITALIC);
-    ssd1306_printFixed(24, 8, "Sensor", STYLE_ITALIC);
+    ssd1306_printFixed(16, 8, "Sensor", STYLE_ITALIC);
 
     float temperature;
     float humidity;
@@ -166,7 +166,7 @@ static void render_last_readings(void)
     snprintf(line_buffer, SCREEN_WIDTH + 1, "%-5s %.1f'C", "Temp:", temperature);
     ssd1306_printFixed(0, 24, line_buffer, STYLE_NORMAL);
     snprintf(line_buffer, SCREEN_WIDTH + 1, "%-5s %.1f %%", "Hum:", humidity);
-    ssd1306_printFixed(0, 32, line_buffer, STYLE_NORMAL);
+    ssd1306_printFixed(0, 40, line_buffer, STYLE_NORMAL);
 }
 
 static void render_historical_temperature(void)
@@ -186,7 +186,7 @@ static void render_historical_temperature(void)
     char line_buffer[SCREEN_WIDTH + 1];
     snprintf(line_buffer, SCREEN_WIDTH + 1, "%-5s %.1f'C", "Min:", sorted_temps[0]);
     ssd1306_printFixed(0, 24, line_buffer, STYLE_NORMAL);
-    snprintf(line_buffer, SCREEN_WIDTH + 1, "%-5s %.1f'C", "Avg:", sorted_temps[((sorted_temps_len - 1) / 2)]);
+    snprintf(line_buffer, SCREEN_WIDTH + 1, "%-5s %.1f'C", "Med:", sorted_temps[((sorted_temps_len - 1) / 2)]);
     ssd1306_printFixed(0, 32, line_buffer, STYLE_NORMAL);
     snprintf(line_buffer, SCREEN_WIDTH + 1, "%-5s %.1f'C", "Max:", sorted_temps[(sorted_temps_len - 1)]);
     ssd1306_printFixed(0, 40, line_buffer, STYLE_NORMAL);
@@ -207,10 +207,10 @@ static void render_historical_humidity(void)
     }
 
     char line_buffer[SCREEN_WIDTH + 1];
-    snprintf(line_buffer, SCREEN_WIDTH + 1, "%-5s %.1f'C", "Min:", sorted_humids[0]);
+    snprintf(line_buffer, SCREEN_WIDTH + 1, "%-5s %.1f %%", "Min:", sorted_humids[0]);
     ssd1306_printFixed(0, 24, line_buffer, STYLE_NORMAL);
-    snprintf(line_buffer, SCREEN_WIDTH + 1, "%-5s %.1f'C", "Avg:", sorted_humids[((sorted_humids_len - 1) / 2)]);
+    snprintf(line_buffer, SCREEN_WIDTH + 1, "%-5s %.1f %%", "Med:", sorted_humids[((sorted_humids_len - 1) / 2)]);
     ssd1306_printFixed(0, 32, line_buffer, STYLE_NORMAL);
-    snprintf(line_buffer, SCREEN_WIDTH + 1, "%-5s %.1f'C", "Max:", sorted_humids[(sorted_humids_len - 1)]);
+    snprintf(line_buffer, SCREEN_WIDTH + 1, "%-5s %.1f %%", "Max:", sorted_humids[(sorted_humids_len - 1)]);
     ssd1306_printFixed(0, 40, line_buffer, STYLE_NORMAL);
 }

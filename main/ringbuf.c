@@ -3,6 +3,9 @@
 //==================================================================================================
 
 #include "ringbuf.h"
+#include "freertos/FreeRTOS.h"
+#include "freertos/semphr.h"
+#include <assert.h>
 #include <math.h>
 #include <stdlib.h>
 
@@ -15,6 +18,7 @@
 #define rbuf_data (rbuf->data)
 #define rbuf_capacity (rbuf->capacity)
 #define rbuf_get_idx (rbuf->get_idx)
+#define rbuf_mutex (rbuf->mutex)
 
 //==================================================================================================
 // ENUMS - STRUCTS - TYPEDEFS
@@ -40,21 +44,33 @@ ringbuf ringbuf_init(float dst[], size_t dst_len)
     {
         dst[i] = NAN;
     }
-    ringbuf rbuf = {.data = dst, .capacity = dst_len, .get_idx = dst_len - 1};
+    SemaphoreHandle_t mutex = xSemaphoreCreateMutex();
+    assert(mutex);
+    ringbuf rbuf = {.data = dst, .capacity = dst_len, .get_idx = dst_len - 1, .mutex = mutex};
     return rbuf;
 }
 
 void ringbuf_put(ringbuf *rbuf, float new_item)
 {
-    // TODO LORIS: mutex
+    BaseType_t mutex_obtained = xSemaphoreTake(rbuf_mutex, portMAX_DELAY);
+    if (!mutex_obtained)
+    {
+        return;
+    }
     rbuf_get_idx = (rbuf_get_idx + 1) % rbuf_capacity;
     rbuf_data[rbuf_get_idx] = new_item;
+    xSemaphoreGive(rbuf_mutex);
 }
 
 size_t ringbuf_get(ringbuf *rbuf, float *dst)
 {
-    // TODO LORIS: mutex
+    BaseType_t mutex_obtained = xSemaphoreTake(rbuf_mutex, portMAX_DELAY);
+    if (!mutex_obtained)
+    {
+        return 0;
+    }
     float get_value = rbuf_data[rbuf_get_idx];
+    xSemaphoreGive(rbuf_mutex);
     if (isnan(get_value))
     {
         return 0;

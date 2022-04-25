@@ -26,6 +26,8 @@
 
 #pragma once
 
+#include "freertos/FreeRTOS.h"
+#include "freertos/semphr.h"
 #include <stddef.h>
 
 typedef struct
@@ -33,6 +35,7 @@ typedef struct
     float *data;
     size_t capacity;
     size_t get_idx;
+    SemaphoreHandle_t mutex;
 } ringbuf;
 
 /*
