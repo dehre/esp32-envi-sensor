@@ -38,7 +38,7 @@ static int compare_floats(const void *a, const void *b);
 // GLOBAL FUNCTIONS
 //==================================================================================================
 
-ringbuf ringbuf_init(float dst[], size_t dst_len)
+ringbuf_t ringbuf_init(float dst[], size_t dst_len)
 {
     for (size_t i = 0; i < dst_len; i++)
     {
@@ -46,11 +46,11 @@ ringbuf ringbuf_init(float dst[], size_t dst_len)
     }
     SemaphoreHandle_t mutex = xSemaphoreCreateMutex();
     assert(mutex);
-    ringbuf rbuf = {.data = dst, .capacity = dst_len, .get_idx = dst_len - 1, .mutex = mutex};
+    ringbuf_t rbuf = {.data = dst, .capacity = dst_len, .get_idx = dst_len - 1, .mutex = mutex};
     return rbuf;
 }
 
-void ringbuf_put(ringbuf *rbuf, float new_item)
+void ringbuf_put(ringbuf_t *rbuf, float new_item)
 {
     BaseType_t mutex_obtained = xSemaphoreTake(rbuf_mutex, portMAX_DELAY);
     if (!mutex_obtained)
@@ -62,7 +62,7 @@ void ringbuf_put(ringbuf *rbuf, float new_item)
     xSemaphoreGive(rbuf_mutex);
 }
 
-size_t ringbuf_get(ringbuf *rbuf, float *dst)
+size_t ringbuf_get(ringbuf_t *rbuf, float *dst)
 {
     BaseType_t mutex_obtained = xSemaphoreTake(rbuf_mutex, portMAX_DELAY);
     if (!mutex_obtained)
@@ -79,7 +79,7 @@ size_t ringbuf_get(ringbuf *rbuf, float *dst)
     return 1;
 }
 
-size_t ringbuf_getallsorted(ringbuf *rbuf, float dst[])
+size_t ringbuf_getallsorted(ringbuf_t *rbuf, float dst[])
 {
     size_t i;
     for (i = 0; i < rbuf_capacity; i++)

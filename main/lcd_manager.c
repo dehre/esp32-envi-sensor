@@ -70,8 +70,8 @@ static void render_historical_humidity(void);
 static uint8_t my_font_6x8[MY_FONT_6x8_LEN];
 
 /* Ring-buffers for temperature and humidity */
-static ringbuf ringbuf_lcd_temperature;
-static ringbuf ringbuf_lcd_humidity;
+static ringbuf_t ringbuf_lcd_temperature;
+static ringbuf_t ringbuf_lcd_humidity;
 
 /* Memory reserved for holding ring-buffers' data */
 static float ringbuf_lcd_temperature_data_[ringbuf_lcd_data_len_];

@@ -36,29 +36,29 @@ typedef struct
     size_t capacity;
     size_t get_idx;
     SemaphoreHandle_t mutex;
-} ringbuf;
+} ringbuf_t;
 
 /*
  * ringbuf_init creates a new ring-buffer.
  * It assumes dst is provided by the application writer and exists for the entire lifetime of the program.
  * It returns the new ringbuf.
  */
-ringbuf ringbuf_init(float dst[], size_t dst_len);
+ringbuf_t ringbuf_init(float dst[], size_t dst_len);
 
 /*
  * ringbuf_put adds a new item to the ring-buffer, overwriting the oldest one if necessary.
  */
-void ringbuf_put(ringbuf *rbuf, float new_item);
+void ringbuf_put(ringbuf_t *rbuf, float new_item);
 
 /*
  * ringbuf_get gets the last item added to the ring-buffer.
  * It returns the number of items retrieved, i.e. 0 if the ring-buffer is empty, 1 otherwise.
  */
-size_t ringbuf_get(ringbuf *rbuf, float *dst);
+size_t ringbuf_get(ringbuf_t *rbuf, float *dst);
 
 /*
  * ringbuf_getallsorted gets all the items stored in the ring-buffer.
  * It assumes dst is capable of holding all these items.
  * It returns the number of items retrieved.
  */
-size_t ringbuf_getallsorted(ringbuf *rbuf, float dst[]);
+size_t ringbuf_getallsorted(ringbuf_t *rbuf, float dst[]);
