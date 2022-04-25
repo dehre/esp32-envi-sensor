@@ -11,8 +11,6 @@
 #include "lcd_manager.h"
 #include "sht21.h"
 
-// TODO LORIS: check if there's an UNUSED macro, or create it yourself
-
 //==================================================================================================
 // DEFINES - MACROS
 //==================================================================================================
@@ -113,7 +111,6 @@ static void create_task(TaskFunction_t task_fn, const char *const task_name, UBa
 
 static void tt_read_sensor(void *param)
 {
-    (void)param;
     const TickType_t frequency = READ_SENSOR_FREQUENCY_MS / portTICK_PERIOD_MS;
     TickType_t lastWakeTime = xTaskGetTickCount();
     while (1)
@@ -153,7 +150,6 @@ static void tt_read_sensor(void *param)
 
 static void tt_update_ble(void *param)
 {
-    (void)param;
     while (1)
     {
         sensor_reading_t reading;
@@ -167,7 +163,6 @@ static void tt_update_ble(void *param)
 
 static void tt_update_lcd_ring_buffer(void *param)
 {
-    (void)param;
     while (1)
     {
         sensor_reading_t reading;
@@ -181,7 +176,6 @@ static void tt_update_lcd_ring_buffer(void *param)
 
 static void tt_read_lcd_switch(void *param)
 {
-    (void)param;
     // TODO LORIS:
     // wait for switch rising edge
     // debounce
@@ -199,7 +193,6 @@ static void tt_read_lcd_switch(void *param)
 
 static void tt_render_lcd_view(void *param)
 {
-    (void)param;
     while (1)
     {
         while (!xSemaphoreTake(binsemaphore_lcd_render, portMAX_DELAY))
