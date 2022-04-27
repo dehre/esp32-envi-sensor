@@ -24,9 +24,11 @@
 // TODO LORIS: put this #define in main.h and update to 5000
 #define READ_SENSOR_FREQUENCY_MS 500
 
+//
+// Task Priorities
+//
 #define TT_PRIORITY_MAIN 1                          // priority of main task, for reference
 #define TT_PRIORITY_MAX (configMAX_PRIORITIES - 1U) // max priority that can be assigned, for reference
-
 #define TT_PRIORITY_READ_SENSOR 2
 #define TT_PRIORITY_UPDATE_BLE 2
 #define TT_PRIORITY_UPDATE_LCD_RING_BUFFER 2
@@ -70,7 +72,7 @@ static QueueHandle_t binqueue_ble = NULL;
 static QueueHandle_t binqueue_lcd = NULL;
 
 // lcd_view 0, 1, 2 determine which view is rendered on the lcd
-static uint8_t lcd_view = 0;
+static uint8_t lcd_view = 2;
 
 // binsemaphore_lcd_render informs a task when the lcd_view has been updated
 static SemaphoreHandle_t binsemaphore_lcd_render = NULL;
@@ -144,6 +146,10 @@ static void tt_read_sensor(void *param)
             ESP_LOGW(ESP_LOG_TAG, "last sensor reading not received from monitor, overwriting with new value");
             configASSERT(xQueueOverwrite(binqueue_lcd, (void *)&reading));
         }
+        if (xSemaphoreGive(binsemaphore_lcd_render) != pdTRUE)
+        {
+            ESP_LOGW(ESP_LOG_TAG, "failed to give binsemaphore_lcd_render");
+        }
         vTaskDelayUntil(&lastWakeTime, frequency);
     }
 }
@@ -184,10 +190,10 @@ static void tt_read_lcd_switch(void *param)
 
     while (1)
     {
-        vTaskDelay(2000 / portTICK_PERIOD_MS);
         lcd_view = (lcd_view + 1) % 3;
         BaseType_t given = xSemaphoreGive(binsemaphore_lcd_render);
         configASSERT(given);
+        vTaskDelay(5000 / portTICK_PERIOD_MS);
     }
 }
 
