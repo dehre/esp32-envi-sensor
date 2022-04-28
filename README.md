@@ -44,6 +44,8 @@ To understand how the different parts of the system work with each other, it's u
 
 - `tt_update_lcd_ring_buffer`: waits for `binqueue_ble` to hold new data, gets it, writes it to the ring-buffers `ringbuf_lcd_temperature` and `ringbuf_lcd_humidity` (which hold the last 120 readings), and signals `binsemaphore_lcd_render`
 
+TODO LORIS: this is just an interrupt handler, and has different name
+
 - `tt_read_lcd_switch`: waits from a falling edge, debounces the switch, increments the counter `lcd_view`, and signals the binary semaphore `binsemaphore_lcd_render`
 
 - `tt_render_lcd_view`: waits for `binsemaphore_lcd_render`, reads the counter `lcd_view`, and renders the appropriate view on the lcd
@@ -53,6 +55,8 @@ In addition:
 - the module `ble_manager` takes care of the entire Bluetooth setup, abstracting all the details from `tt_update_ble`
 
 - the module `lcd_manager` takes care of rendering the views using the data from `ringbuf_lcd_temperature` and `ringbuf_lcd_humidity`
+
+- the module `lcd_switch_manager` takes care of initializing and debouncing the switch responsible for updating the `lcd_view` and signaling `binsemaphore_lcd_render`
 
 ## Hardware Connection
 

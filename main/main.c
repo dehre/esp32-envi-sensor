@@ -10,6 +10,7 @@
 #include "freertos/queue.h"
 #include "freertos/task.h"
 #include "lcd_manager.h"
+#include "lcd_switch_manager.h"
 #include "sht21.h"
 
 //==================================================================================================
@@ -24,10 +25,6 @@
 
 // TODO LORIS: put this #define in main.h and update to 5000
 #define READ_SENSOR_FREQUENCY_MS 500
-
-// TODO LORIS: header file for all pins?
-#define LCD_SWITCH_PIN 21
-#define LCD_SWITCH_BIT_MASK (1ULL << LCD_SWITCH_PIN)
 
 //
 // Task Priorities
@@ -52,8 +49,6 @@ typedef struct
 //==================================================================================================
 // STATIC PROTOTYPES
 //==================================================================================================
-
-static esp_err_t lcd_switch_init(void);
 
 static void lcd_switch_isr_handler(void *param);
 
@@ -96,7 +91,7 @@ void app_main(void)
     ESP_ERROR_CHECK(sht21_init(0, GPIO_NUM_32, GPIO_NUM_33, sht21_i2c_speed_standard));
     ESP_ERROR_CHECK(debug_heartbeat_init(GPIO_NUM_25));
     ESP_ERROR_CHECK(ble_manager_init());
-    ESP_ERROR_CHECK(lcd_switch_init());
+    ESP_ERROR_CHECK(lcd_switch_manager_init(lcd_switch_isr_handler));
     lcd_manager_init();
 
     create_task(tt_read_sensor, "tt_read_sensor", TT_PRIORITY_READ_SENSOR);
@@ -111,25 +106,11 @@ void app_main(void)
 // STATIC FUNCTIONS
 //==================================================================================================
 
-static esp_err_t lcd_switch_init(void)
-{
-    gpio_config_t gpio_conf = {0};
-    gpio_conf.intr_type = GPIO_INTR_NEGEDGE;
-    gpio_conf.pin_bit_mask = LCD_SWITCH_BIT_MASK;
-    gpio_conf.mode = GPIO_MODE_INPUT;
-    gpio_conf.pull_up_en = 1;
-    IFERR_RETE(gpio_config(&gpio_conf), "failed lcd_switch setup");
-
-    IFERR_RETE(gpio_install_isr_service(0), "failed to install isr_service");
-    IFERR_RETE(gpio_isr_handler_add(LCD_SWITCH_PIN, lcd_switch_isr_handler, NULL), "failed to register isr_handler");
-    return ESP_OK;
-}
-
 static void lcd_switch_isr_handler(void *param)
 {
     lcd_view = (lcd_view + 1) % 3;
     xSemaphoreGiveFromISR(binsemaphore_lcd_render, NULL);
-    gpio_intr_disable(LCD_SWITCH_PIN); // disable interrupts for debouncing
+    lcd_switch_manager_start_debounce();
 }
 
 static void create_task(TaskFunction_t task_fn, const char *const task_name, UBaseType_t priority)
@@ -215,7 +196,6 @@ static void tt_render_lcd_view(void *param)
         while (!xSemaphoreTake(binsemaphore_lcd_render, portMAX_DELAY))
             ;
         lcd_manager_render(lcd_view);
-        vTaskDelay(500 / portTICK_PERIOD_MS); // TODO LORIS: #define these 500ms for lcd_switch debounce
-        gpio_intr_enable(LCD_SWITCH_PIN);     // enable interrupt after debouncing
+        lcd_switch_manager_end_debounce();
     }
 }

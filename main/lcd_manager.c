@@ -81,6 +81,7 @@ static float ringbuf_lcd_humidity_data_[ringbuf_lcd_data_len_];
 // GLOBAL FUNCTIONS
 //==================================================================================================
 
+// TODO LORIS: return esp_err_t for consistency
 void lcd_manager_init(void)
 {
     ringbuf_lcd_temperature = ringbuf_init(ringbuf_lcd_temperature_data_, ringbuf_lcd_data_len_);
