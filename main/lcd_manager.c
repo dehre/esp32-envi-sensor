@@ -3,6 +3,7 @@
 //==================================================================================================
 
 #include "lcd_manager.h"
+#include "esp_err.h"
 #include "ringbuf.h"
 #include "ssd1306.h"
 
@@ -43,13 +44,19 @@
 // ENUMS - STRUCTS - TYPEDEFS
 //==================================================================================================
 
+typedef enum
+{
+    LCD_VIEW_LAST_READINGS = 0,
+    LCD_VIEW_HISTORICAL_TEMPERATURE,
+    LCD_VIEW_HISTORICAL_HUMIDITY,
+    LCD_VIEW_COUNT
+} lcd_view_t;
+
 //==================================================================================================
 // STATIC PROTOTYPES
 //==================================================================================================
 
 static void initialize_my_font_6x8(void);
-
-static void clear_line(uint8_t x_pos, uint8_t y_pos);
 
 static void render_last_readings(void);
 
@@ -77,12 +84,14 @@ static ringbuf_t ringbuf_lcd_humidity;
 static float ringbuf_lcd_temperature_data_[ringbuf_lcd_data_len_];
 static float ringbuf_lcd_humidity_data_[ringbuf_lcd_data_len_];
 
+// lcd_view determines which view is rendered on the lcd
+static lcd_view_t lcd_view = LCD_VIEW_LAST_READINGS;
+
 //==================================================================================================
 // GLOBAL FUNCTIONS
 //==================================================================================================
 
-// TODO LORIS: return esp_err_t for consistency
-void lcd_manager_init(void)
+esp_err_t lcd_manager_init(void)
 {
     ringbuf_lcd_temperature = ringbuf_init(ringbuf_lcd_temperature_data_, ringbuf_lcd_data_len_);
     ringbuf_lcd_humidity = ringbuf_init(ringbuf_lcd_humidity_data_, ringbuf_lcd_data_len_);
@@ -90,6 +99,7 @@ void lcd_manager_init(void)
     ssd1306_setFixedFont(my_font_6x8);
     pcd8544_84x48_spi_init(RST_PIN, CE_PIN, DC_PIN);
     ssd1306_clearScreen();
+    return ESP_OK;
 }
 
 void lcd_manager_store_temperature(float temperature)
@@ -102,19 +112,20 @@ void lcd_manager_store_humidity(float humidity)
     ringbuf_put(&ringbuf_lcd_humidity, humidity);
 }
 
-// TODO LORIS: perhaps an enum for lcd_view?
-void lcd_manager_render(uint8_t lcd_view)
+void lcd_manager_select_next_view(void)
 {
-    if (lcd_view > 2)
-        return;
+    lcd_view = (lcd_view + 1) % LCD_VIEW_COUNT;
+}
 
+void lcd_manager_render(void)
+{
     switch (lcd_view)
     {
-    case 0:
+    case LCD_VIEW_LAST_READINGS:
         return render_last_readings();
-    case 1:
+    case LCD_VIEW_HISTORICAL_TEMPERATURE:
         return render_historical_temperature();
-    case 2:
+    case LCD_VIEW_HISTORICAL_HUMIDITY:
         return render_historical_humidity();
     default:
         assert(0);
@@ -133,17 +144,6 @@ static void initialize_my_font_6x8(void)
     {
         my_font_6x8[i] = my_bitmap[j];
     }
-}
-
-// TODO LORIS: need it?
-static void clear_line(uint8_t x_pos, uint8_t y_pos)
-{
-    char line_buffer[SCREEN_WIDTH + 1] = {0};
-    for (uint32_t i = 0; i < SCREEN_WIDTH; i++)
-    {
-        line_buffer[i] = ' ';
-    }
-    ssd1306_printFixed(x_pos, y_pos, line_buffer, STYLE_NORMAL);
 }
 
 static void render_last_readings(void)

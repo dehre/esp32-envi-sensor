@@ -44,9 +44,9 @@ To understand how the different parts of the system work with each other, it's u
 
 - `tt_update_lcd_ring_buffer`: waits for `binqueue_ble` to hold new data, gets it, writes it to the ring-buffers `ringbuf_lcd_temperature` and `ringbuf_lcd_humidity` (which hold the last 120 readings), and signals `binsemaphore_lcd_render`
 
-- `lcd_switch_isr_handler`: waits from a falling edge, increments the counter `lcd_view`, signals the binary semaphore `binsemaphore_lcd_render`, and debounces the switch; this is an interrupt handler, not a task, but it's important for clarifying how the application works
+- `lcd_switch_isr_handler`: waits from a falling edge, debounces the switch, select the next lcd-view, and signals the binary semaphore `binsemaphore_lcd_render`; this is an interrupt handler, not a task, but its work is important for clarifying how the application works
 
-- `tt_render_lcd_view`: waits for `binsemaphore_lcd_render`, reads the counter `lcd_view`, and renders the appropriate view on the lcd
+- `tt_render_lcd_view`: waits for `binsemaphore_lcd_render`, and re-renders the appropriate view on the lcd
 
 In addition:
 
@@ -212,6 +212,17 @@ W (23587) gatts_profile_event_handler: ESP_GATTS_READ_EVT
 W (27577) gatts_profile_event_handler: ESP_GATTS_DISCONNECT_EVT
 W (27597) gap_event_handler: ESP_GAP_BLE_ADV_START_COMPLETE_EVT
 ```
+
+## Little ssd1306 Library Workaround
+
+The `ssd1306` library cannot render non-ASCII character, so it displays an empty space each time it encounters one, such as the `°` degrees symbol:
+
+```c
+ssd1306_printFixed(0,  8, "100°C", STYLE_NORMAL);
+```
+
+Without creating a new font that included extended-ASCII characters, a copy of the existing font is made and the `'` character (which wasn't needed anyway) replaced by the bitmap for the `°` character.
+See: https://github.com/lexus2k/ssd1306/issues/139#issuecomment-1106239972
 
 ## Running Tests
 

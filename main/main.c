@@ -72,9 +72,6 @@ static QueueHandle_t binqueue_ble = NULL;
 // pass sensor readings from the sensor to the onboard monitor
 static QueueHandle_t binqueue_lcd = NULL;
 
-// lcd_view 0, 1, 2 determine which view is rendered on the lcd
-static uint8_t lcd_view = 2;
-
 // binsemaphore_lcd_render informs a task when the lcd_view has been updated
 static SemaphoreHandle_t binsemaphore_lcd_render = NULL;
 
@@ -89,10 +86,10 @@ void app_main(void)
     binsemaphore_lcd_render = xSemaphoreCreateBinary();
 
     ESP_ERROR_CHECK(sht21_init(0, GPIO_NUM_32, GPIO_NUM_33, sht21_i2c_speed_standard));
-    ESP_ERROR_CHECK(debug_heartbeat_init(GPIO_NUM_25));
     ESP_ERROR_CHECK(ble_manager_init());
     ESP_ERROR_CHECK(lcd_switch_manager_init(lcd_switch_isr_handler));
-    lcd_manager_init();
+    ESP_ERROR_CHECK(lcd_manager_init());
+    ESP_ERROR_CHECK(debug_heartbeat_init(GPIO_NUM_25));
 
     create_task(tt_read_sensor, "tt_read_sensor", TT_PRIORITY_READ_SENSOR);
     create_task(tt_update_ble, "tt_update_ble", TT_PRIORITY_UPDATE_BLE);
@@ -108,9 +105,9 @@ void app_main(void)
 
 static void lcd_switch_isr_handler(void *param)
 {
-    lcd_view = (lcd_view + 1) % 3;
-    xSemaphoreGiveFromISR(binsemaphore_lcd_render, NULL);
     lcd_switch_manager_debounce();
+    lcd_manager_select_next_view();
+    xSemaphoreGiveFromISR(binsemaphore_lcd_render, NULL);
 }
 
 static void create_task(TaskFunction_t task_fn, const char *const task_name, UBaseType_t priority)
@@ -196,6 +193,6 @@ static void tt_render_lcd_view(void *param)
         while (!xSemaphoreTake(binsemaphore_lcd_render, portMAX_DELAY))
         {
         }
-        lcd_manager_render(lcd_view);
+        lcd_manager_render();
     }
 }
