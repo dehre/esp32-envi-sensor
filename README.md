@@ -88,6 +88,9 @@ The connection between ESP Board and the other components is as follows:
   |                |                      |                |
   |                |                      |__Push_Button___|
   |                |
+
+-----------------Optional___Debugging_Tools-------------------
+
   |                |                       ________________
   |                |                      |                |
   |              15|______________________|TDO             |
@@ -96,7 +99,14 @@ The connection between ESP Board and the other components is as follows:
   |              14|______________________|TMS             |
   |             GND|______________________|GND             |
   |                |                      |                |
-  |_____ESP32______|                      |__JTAG_Adapter__|
+  |                |                      |__JTAG_Adapter__|
+  |                |
+  |                |                       ________________
+  |                |                      |                |
+  |              25|______________________|CH1             |
+  |             GND|______________________|GND             |
+  |                |                      |                |
+  |_____ESP32______|                      |_Logic_Analyzer_|
 ```
 
 The JTAG Adapter is of course be removed after development.
