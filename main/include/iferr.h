@@ -14,6 +14,8 @@
  * ```
  */
 
+// TODO LORIS: make `format` argument optional, with a better log string
+
 #ifdef ESP_LOG_TAG
 
 #include "esp_err.h"

@@ -83,7 +83,7 @@ The connection between ESP Board and the other components is as follows:
   |                |
   |                |                       ________________
   |                |                      |                |
-  |              ??|______________________|A               |
+  |              21|______________________|A               |
   |             GND|______________________|B    __/__      |
   |                |                      |                |
   |                |                      |__Push_Button___|
