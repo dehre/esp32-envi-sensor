@@ -20,9 +20,6 @@
 #define ESP_LOG_TAG "MAIN"
 #include "iferr.h"
 
-// TODO LORIS: can the value be lower?
-#define TASK_STACK_DEPTH 2048
-
 // TODO LORIS: put this #define in main.h and update to 5000
 #define READ_SENSOR_FREQUENCY_MS 500
 
@@ -35,6 +32,9 @@
 #define TT_PRIORITY_UPDATE_BLE 2
 #define TT_PRIORITY_UPDATE_LCD_RING_BUFFER 2
 #define TT_PRIORITY_RENDER_LCD_VIEW 2
+
+// TODO LORIS: can the value be lower?
+#define TASK_STACK_DEPTH 2048
 
 //==================================================================================================
 // ENUMS - STRUCTS - TYPEDEFS
@@ -110,7 +110,7 @@ static void lcd_switch_isr_handler(void *param)
 {
     lcd_view = (lcd_view + 1) % 3;
     xSemaphoreGiveFromISR(binsemaphore_lcd_render, NULL);
-    lcd_switch_manager_start_debounce();
+    lcd_switch_manager_debounce();
 }
 
 static void create_task(TaskFunction_t task_fn, const char *const task_name, UBaseType_t priority)
@@ -194,8 +194,8 @@ static void tt_render_lcd_view(void *param)
     while (1)
     {
         while (!xSemaphoreTake(binsemaphore_lcd_render, portMAX_DELAY))
-            ;
+        {
+        }
         lcd_manager_render(lcd_view);
-        lcd_switch_manager_end_debounce();
     }
 }

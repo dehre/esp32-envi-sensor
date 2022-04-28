@@ -30,9 +30,9 @@ TODO LORIS: upload picture
 
 - ESP-Prog JTAG Adapter (optional, useful for development)
 
-- Breadboard and cables as usual
+- Logic Analyzer (optional, useful for development)
 
-## Device Description
+- Breadboard and cables as usual
 
 ## Tasks Overview
 
@@ -44,9 +44,7 @@ To understand how the different parts of the system work with each other, it's u
 
 - `tt_update_lcd_ring_buffer`: waits for `binqueue_ble` to hold new data, gets it, writes it to the ring-buffers `ringbuf_lcd_temperature` and `ringbuf_lcd_humidity` (which hold the last 120 readings), and signals `binsemaphore_lcd_render`
 
-TODO LORIS: this is just an interrupt handler, and has different name
-
-- `tt_read_lcd_switch`: waits from a falling edge, debounces the switch, increments the counter `lcd_view`, and signals the binary semaphore `binsemaphore_lcd_render`
+- `lcd_switch_isr_handler`: waits from a falling edge, increments the counter `lcd_view`, signals the binary semaphore `binsemaphore_lcd_render`, and debounces the switch; this is an interrupt handler, not a task, but it's important for clarifying how the application works
 
 - `tt_render_lcd_view`: waits for `binsemaphore_lcd_render`, reads the counter `lcd_view`, and renders the appropriate view on the lcd
 
@@ -54,9 +52,9 @@ In addition:
 
 - the module `ble_manager` takes care of the entire Bluetooth setup, abstracting all the details from `tt_update_ble`
 
-- the module `lcd_manager` takes care of rendering the views using the data from `ringbuf_lcd_temperature` and `ringbuf_lcd_humidity`
-
 - the module `lcd_switch_manager` takes care of initializing and debouncing the switch responsible for updating the `lcd_view` and signaling `binsemaphore_lcd_render`
+
+- the module `lcd_manager` takes care of rendering the views using the data from `ringbuf_lcd_temperature` and `ringbuf_lcd_humidity`
 
 ## Hardware Connection
 
@@ -117,9 +115,34 @@ The JTAG Adapter is of course be removed after development.
 
 ## External Libraries
 
-- [sht21](https://github.com/dehre/sht21) - driver for the temperature and humidity sensor, which I wrote myself
+- [sht21](https://github.com/dehre/sht21) - driver for the temperature and humidity sensor (I'm the author)
 
 - [ssd1306](https://github.com/lexus2k/ssd1306) - driver for the Nokia 5110 display
+
+## LCD_Switch Debouncing
+
+Many inexpensive switches will mechanically oscillate for up tens of milliseconds when touched or released.
+This would cause the GPIO peripheral to trigger multiple interrupts, and the application to behave as the user touched the switch multiple times, when, in fact, he did it only once.
+
+In the next few lines, I will try to explain concisely the approach I took for debouncing the lcd_switch.
+
+- the `lcd_switch_manager_init` function, after setting up the GPIO pin, creates a new FreeRTOS Task named `tt_debounce_lcd_switch`
+
+- when the switch is touched, the interrupt handler is called, interrupts are disabled, and the binary semaphore `binsemaphore_lcd_switch_debounce` is signaled
+
+- the task `tt_debounce_lcd_switch`, which was waiting for the semaphore, wakes up, waits x milliseconds, and re-enables the interrupts on lcd_switch
+
+This approach allows a single function call, made in the ISR handler, to debounce the switch without 1. adding delays for the user, and 2. requiring another function call to re-enable interrupts.
+
+```c
+// main.c
+static void lcd_switch_isr_handler(void *param)
+{
+    lcd_view = (lcd_view + 1) % 3;
+    xSemaphoreGiveFromISR(binsemaphore_lcd_render, NULL);
+    lcd_switch_manager_debounce();
+}
+```
 
 ## BLE Setup
 
