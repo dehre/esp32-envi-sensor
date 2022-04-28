@@ -37,7 +37,6 @@
 #define TT_PRIORITY_READ_SENSOR 2
 #define TT_PRIORITY_UPDATE_BLE 2
 #define TT_PRIORITY_UPDATE_LCD_RING_BUFFER 2
-#define TT_PRIORITY_READ_LCD_SWITCH 2
 #define TT_PRIORITY_RENDER_LCD_VIEW 2
 
 //==================================================================================================
@@ -65,8 +64,6 @@ static void tt_read_sensor(void *param);
 static void tt_update_ble(void *param);
 
 static void tt_update_lcd_ring_buffer(void *param);
-
-static void tt_read_lcd_switch(void *param);
 
 static void tt_render_lcd_view(void *param);
 
@@ -105,7 +102,6 @@ void app_main(void)
     create_task(tt_read_sensor, "tt_read_sensor", TT_PRIORITY_READ_SENSOR);
     create_task(tt_update_ble, "tt_update_ble", TT_PRIORITY_UPDATE_BLE);
     create_task(tt_update_lcd_ring_buffer, "tt_update_lcd_ring_buffer", TT_PRIORITY_UPDATE_LCD_RING_BUFFER);
-    create_task(tt_read_lcd_switch, "tt_read_lcd_switch", TT_PRIORITY_READ_LCD_SWITCH);
     create_task(tt_render_lcd_view, "tt_render_lcd_view", TT_PRIORITY_RENDER_LCD_VIEW);
 
     vTaskDelete(NULL);
@@ -131,11 +127,9 @@ static esp_err_t lcd_switch_init(void)
 
 static void lcd_switch_isr_handler(void *param)
 {
-    debug_heartbeat_toggle();
-    // lcd_view = (lcd_view + 1) % 3;
-    // TODO LORIS: handle not-given situation, instead of assert
-    // BaseType_t given = xSemaphoreGiveFromISR(binsemaphore_lcd_render, NULL);
-    // configASSERT(given);
+    lcd_view = (lcd_view + 1) % 3;
+    xSemaphoreGiveFromISR(binsemaphore_lcd_render, NULL);
+    gpio_intr_disable(LCD_SWITCH_PIN); // disable interrupts for debouncing
 }
 
 static void create_task(TaskFunction_t task_fn, const char *const task_name, UBaseType_t priority)
@@ -214,23 +208,6 @@ static void tt_update_lcd_ring_buffer(void *param)
     }
 }
 
-static void tt_read_lcd_switch(void *param)
-{
-    // TODO LORIS:
-    // wait for switch rising edge
-    // debounce
-    // mutex -> increment count % 3
-    // signal with binary semaphore
-
-    while (1)
-    {
-        lcd_view = (lcd_view + 1) % 3;
-        BaseType_t given = xSemaphoreGive(binsemaphore_lcd_render);
-        configASSERT(given);
-        vTaskDelay(5000 / portTICK_PERIOD_MS);
-    }
-}
-
 static void tt_render_lcd_view(void *param)
 {
     while (1)
@@ -238,10 +215,7 @@ static void tt_render_lcd_view(void *param)
         while (!xSemaphoreTake(binsemaphore_lcd_render, portMAX_DELAY))
             ;
         lcd_manager_render(lcd_view);
+        vTaskDelay(500 / portTICK_PERIOD_MS); // TODO LORIS: #define these 500ms for lcd_switch debounce
+        gpio_intr_enable(LCD_SWITCH_PIN);     // enable interrupt after debouncing
     }
-
-    // TODO LORIS:
-    // wait for semaphore signal
-    // read count -> mutex
-    // render screen
 }
