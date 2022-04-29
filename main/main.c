@@ -20,9 +20,6 @@
 #define ESP_LOG_TAG "MAIN"
 #include "iferr.h"
 
-// TODO LORIS: put this #define in main.h and update to 5000
-#define READ_SENSOR_FREQUENCY_MS 500
-
 //
 // Task Priorities
 //
@@ -52,7 +49,7 @@ typedef struct
 
 static void lcd_switch_isr_handler(void *param);
 
-static void create_task(TaskFunction_t task_fn, const char *const task_name, UBaseType_t priority);
+static void create_task(TaskFunction_t fn, const char *const name, UBaseType_t priority, uint32_t stack_depth);
 
 static void tt_read_sensor(void *param);
 
@@ -91,10 +88,12 @@ void app_main(void)
     ESP_ERROR_CHECK(lcd_manager_init());
     ESP_ERROR_CHECK(debug_heartbeat_init(GPIO_NUM_25));
 
-    create_task(tt_read_sensor, "tt_read_sensor", TT_PRIORITY_READ_SENSOR);
-    create_task(tt_update_ble, "tt_update_ble", TT_PRIORITY_UPDATE_BLE);
-    create_task(tt_update_lcd_ring_buffer, "tt_update_lcd_ring_buffer", TT_PRIORITY_UPDATE_LCD_RING_BUFFER);
-    create_task(tt_render_lcd_view, "tt_render_lcd_view", TT_PRIORITY_RENDER_LCD_VIEW);
+    create_task(tt_read_sensor, "tt_read_sensor", TT_PRIORITY_READ_SENSOR, TASK_STACK_DEPTH);
+    create_task(tt_update_ble, "tt_update_ble", TT_PRIORITY_UPDATE_BLE, TASK_STACK_DEPTH);
+    create_task(tt_update_lcd_ring_buffer, "tt_update_lcd_ring_buffer", TT_PRIORITY_UPDATE_LCD_RING_BUFFER,
+                TASK_STACK_DEPTH);
+    create_task(tt_render_lcd_view, "tt_render_lcd_view", TT_PRIORITY_RENDER_LCD_VIEW,
+                CONFIG_STACK_DEPTH_TASK_RENDER_LCD_VIEW);
 
     vTaskDelete(NULL);
 }
@@ -110,16 +109,16 @@ static void lcd_switch_isr_handler(void *param)
     xSemaphoreGiveFromISR(binsemaphore_lcd_render, NULL);
 }
 
-static void create_task(TaskFunction_t task_fn, const char *const task_name, UBaseType_t priority)
+static void create_task(TaskFunction_t fn, const char *const name, UBaseType_t priority, uint32_t stack_depth)
 {
     TaskHandle_t task_handle = NULL;
-    xTaskCreate(task_fn, task_name, TASK_STACK_DEPTH, NULL, priority, &task_handle);
+    xTaskCreate(fn, name, stack_depth, NULL, priority, &task_handle);
     configASSERT(task_handle);
 }
 
 static void tt_read_sensor(void *param)
 {
-    const TickType_t frequency = READ_SENSOR_FREQUENCY_MS / portTICK_PERIOD_MS;
+    const TickType_t frequency = CONFIG_READ_SENSOR_FREQUENCY_MS / portTICK_PERIOD_MS;
     TickType_t lastWakeTime = xTaskGetTickCount();
     while (1)
     {

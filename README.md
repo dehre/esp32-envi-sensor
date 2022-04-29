@@ -8,8 +8,8 @@ Readings are grabbed every 30 seconds and displayed on the Nokia 5110 lcd screen
 the switch allows the user to choose among three different views:
 
 1. show current temperature and humidity
-2. show max, min, and median temperature among the last 120 readings (last hour)
-3. show max, min, and median humidity among the last 120 readings (last hour)
+2. show min, median, and max temperature among the last 240 readings (last 2 hours)
+3. show min, median, and max humidity among the last 240 readings (last 2 hours)
 
 Finally, the Envi Sensor acts as a BLE (Bluetooth Low Energy) GATT Server, from which a smartphone (or any BLE-enabled device) can read the current temperature and humidity.
 
@@ -33,6 +33,61 @@ TODO LORIS: upload picture
 - Logic Analyzer (optional, useful for development)
 
 - Breadboard and cables as usual
+
+## Building and Flashing
+
+Assuming you have [ESP-IDF setup on your machine](https://docs.espressif.com/projects/esp-idf/en/latest/esp32/get-started/index.html), the following commands will build and flash the application on your board:
+
+```sh
+get_idf # if not done already
+idf.py build
+idf.py -p <port> flash monitor
+```
+
+## Running Tests
+
+Tests have been written for 2 modules:
+
+- `store_float_into_uint8_arr`
+
+- `ringbuf`
+
+The first has a single function that stores a floating-point number into an array of two 8-bit unsigned integers, and is needed to comply with the BLE GATT specification for temperature and humidity. More info on BLE below.  
+The second is a ring-buffer implementation for floating-point numbers.
+
+Both modules are fairly isolated, and could be tested quite easily.
+Tests have been written using [Unity](https://github.com/ThrowTheSwitch/Unity).
+To run the tests, `cd` into the `test` directory first, then build and flash as usual:
+
+```sh
+get_idf # if not done already
+cd test
+idf.py build
+idf.py -p <port> flash monitor
+```
+
+## Configuring the Envi Sensor
+
+Out of the box, the Envi Sensor is going to grab sensor readings every 30 seconds, and store 240 of them.  
+Doing some very difficult math, readings will be stored for `30 * 240 / 60 = 120` minutes.
+
+These values (`READ_SENSOR_FREQUENCY_MS` and `LCD_RINGBUF_DATA_LEN`) can be updated by the user before building, thanks to `kconfig`.
+The menu you're looking for is located under `Component config ---> Envi Sensor`:
+
+```sh
+idf.py menuconfig # will open a terminal-based project configuration menu
+idf.py build
+```
+
+TODO LORIS: upload pic
+
+**Good to know:**
+
+Each time historical temperatures and humidities are rendered, a buffer of size `LCD_RINGBUF_DATA_LEN` is placed on the stack of the task `tt_render_lcd_view`.
+Needless to say, the more sensor readings are stored, the bigger the stack size needs to be for `tt_render_lcd_view`.
+For this reason, the `kconfig` menu mentioned above allows you to configure the stack size for that task, too.
+
+TODO LORIS: ? link for determining FreeRTOS stack size
 
 ## Tasks Overview
 
@@ -223,12 +278,3 @@ ssd1306_printFixed(0,  8, "100°C", STYLE_NORMAL);
 
 Without creating a new font that included extended-ASCII characters, a copy of the existing font is made and the `'` character (which wasn't needed anyway) replaced by the bitmap for the `°` character.
 See: https://github.com/lexus2k/ssd1306/issues/139#issuecomment-1106239972
-
-## Running Tests
-
-```sh
-get_idf # if not done already
-cd test
-idf.py build
-idf.py -p <port> flash monitor
-```

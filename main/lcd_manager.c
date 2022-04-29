@@ -37,9 +37,6 @@
 #define CE_PIN 5   // Chip Enable
 #define RST_PIN 16 // Reset
 
-// TODO LORIS: put this #define in main.h and update to 120
-#define ringbuf_lcd_data_len_ 40
-
 //==================================================================================================
 // ENUMS - STRUCTS - TYPEDEFS
 //==================================================================================================
@@ -81,8 +78,8 @@ static ringbuf_t ringbuf_lcd_temperature;
 static ringbuf_t ringbuf_lcd_humidity;
 
 /* Memory reserved for holding ring-buffers' data */
-static float ringbuf_lcd_temperature_data_[ringbuf_lcd_data_len_];
-static float ringbuf_lcd_humidity_data_[ringbuf_lcd_data_len_];
+static float ringbuf_lcd_temperature_data_[CONFIG_LCD_RINGBUF_DATA_LEN];
+static float ringbuf_lcd_humidity_data_[CONFIG_LCD_RINGBUF_DATA_LEN];
 
 // lcd_view determines which view is rendered on the lcd
 static lcd_view_t lcd_view = LCD_VIEW_LAST_READINGS;
@@ -93,8 +90,8 @@ static lcd_view_t lcd_view = LCD_VIEW_LAST_READINGS;
 
 esp_err_t lcd_manager_init(void)
 {
-    ringbuf_lcd_temperature = ringbuf_init(ringbuf_lcd_temperature_data_, ringbuf_lcd_data_len_);
-    ringbuf_lcd_humidity = ringbuf_init(ringbuf_lcd_humidity_data_, ringbuf_lcd_data_len_);
+    ringbuf_lcd_temperature = ringbuf_init(ringbuf_lcd_temperature_data_, CONFIG_LCD_RINGBUF_DATA_LEN);
+    ringbuf_lcd_humidity = ringbuf_init(ringbuf_lcd_humidity_data_, CONFIG_LCD_RINGBUF_DATA_LEN);
     initialize_my_font_6x8();
     ssd1306_setFixedFont(my_font_6x8);
     pcd8544_84x48_spi_init(RST_PIN, CE_PIN, DC_PIN);
@@ -176,7 +173,7 @@ static void render_historical_temperature(void)
     ssd1306_printFixed(8, 0, "Temperature", STYLE_ITALIC);
     ssd1306_printFixed(16, 8, "Analysis", STYLE_ITALIC);
 
-    float sorted_temps[ringbuf_lcd_data_len_];
+    float sorted_temps[CONFIG_LCD_RINGBUF_DATA_LEN];
     size_t sorted_temps_len = ringbuf_getallsorted(&ringbuf_lcd_temperature, sorted_temps);
     if (sorted_temps_len == 0)
     {
@@ -199,7 +196,7 @@ static void render_historical_humidity(void)
     ssd1306_printFixed(16, 0, "Humidity", STYLE_ITALIC);
     ssd1306_printFixed(16, 8, "Analysis", STYLE_ITALIC);
 
-    float sorted_humids[ringbuf_lcd_data_len_];
+    float sorted_humids[CONFIG_LCD_RINGBUF_DATA_LEN];
     size_t sorted_humids_len = ringbuf_getallsorted(&ringbuf_lcd_humidity, sorted_humids);
     if (sorted_humids_len == 0)
     {

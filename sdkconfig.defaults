@@ -1,8 +1,5 @@
-# Override some defaults so BT stack is enabled
-# in this example
-
 #
-# BT config
+# Override some defaults so BT stack is enabled
 #
 CONFIG_BT_ENABLED=y
 CONFIG_BTDM_CTRL_MODE_BLE_ONLY=y
