@@ -1,42 +1,75 @@
-# ESP32 Envi Sensor
+# Envi Sensor
 
 ## Device Description
 
-The Envi Sensor (like it or not, that's its name) is a temperature and humidity reading device powered by an ESP32 board.
+The Envi Sensor is digital thermometer and hygrometer powered by the [ESP32 board](https://www.espressif.com/en/products/socs/esp32).
 
-Readings are grabbed every 30 seconds and displayed on the Nokia 5110 lcd screen;
-the switch allows the user to choose among three different views:
+Temperature and humidity are collected every 30 seconds and displayed on the Nokia 5110 display.
 
-1. show current temperature and humidity
-2. show min, median, and max temperature among the last 240 readings (last 2 hours)
-3. show min, median, and max humidity among the last 240 readings (last 2 hours)
+With the help of the onboard button, the user can choose among three different views:
 
-Finally, the Envi Sensor acts as a BLE (Bluetooth Low Energy) GATT Server, from which a smartphone (or any BLE-enabled device) can read the current temperature and humidity.
+1. `DEFAULT VIEW`: show current temperature and humidity
+
+2. `TEMPERATURE ANALYSIS`: show min, median, and max temperature among the last 240 readings (last 2 hours)
+
+3. `HUMIDITY ANALYSIS`: show min, median, and max humidity among the last 240 readings (last 2 hours)
+
+Both the reading frequency (default: every 30 sec) and the number of readings stored (default: 240) can be adjusted upon compilation using the [KConfig TUI](https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-reference/kconfig.html) provided with the ESP-IDF installation (see below).
+
+Last but not least, the Envi Sensor acts as a [Bluetooth Low Energy](https://learn.adafruit.com/introduction-to-bluetooth-low-energy) (BLE) GATT Server, from which a smartphone (or any BLE-enabled device) can read the last temperature and humidity.  
+This [example iOS application](github.com/dehre/ios-envi-sensor), acting as a GATT Client, connects to the Envi Sensor and requests new data every 5 seconds.
 
 TODO LORIS: upload picture
 
+TODO LORIS: upload link to youtube video
+
+## README Sections
+
+- [Device Description](#device-description)
+
+- [Bill of Materials](#bill-of-materials)
+
+- [Building and Flashing](#building-and-flashing)
+
+- [Tests](#tests)
+
+- [Configuring the Envi Sensor](#configuring-the-envi-sensor)
+
+- [Tasks Overview](#tasks-overview)
+
+- [Hardware Connection](#hardware-connection)
+
+- [Push Button Debouncing](#push-button-debouncing)
+
+- [External Libraries](#external-libraries)
+
+- [ssd1306 Library Workaround](#ssd1306-library-workaround)
+
+- [BLE Setup](#ble-setup)
+
+- [BLE Events Lifecycle](#ble-events-lifecycle)
+
 ## Bill of Materials
 
-- ESP32-DevKitC V4
+- [ESP32-DevKitC V4](https://docs.espressif.com/projects/esp-idf/en/latest/esp32/hw-reference/esp32/get-started-devkitc.html)
 
-  - features two 32-bit CPU cores, 4MB Flash, 520KB SRAM, Wi-Fi, Bluetooth LE,
-    and a whole bunch of peripherals
+  - with [ESP32-WROOM-32 module](https://www.mouser.com/datasheet/2/891/esp-wroom-32_datasheet_en-1223836.pdf) in my case, which features two 32-bit CPU cores, 4MB Flash, 520KB SRAM, Wi-Fi, Bluetooth LE, and a whole bunch of peripherals
 
-- SHT21 Humidity and Temperature Sensor (a GY-21 module in my case), communicating over I2C
+- [SHT21](https://eu.mouser.com/ProductDetail/Sensirion/SHT21?qs=wWC4CIiyLaNbiIJO6bf9AA%3D%3D) temperature and humidity sensor (GY-21 module in my case), communicating over I2C
 
-- Nokia 5110 Display, communicating over SPI
+- [Nokia 5110 display](https://eu.mouser.com/ProductDetail/Adafruit/338?qs=GURawfaeGuDJpcPmpvWgCw%3D%3D), communicating over SPI
 
-- Normally Open Push Button, set up in negative logic using the ESP32 internal pull-up resistor
+- normally-open push button, set up in negative logic using the ESP32's internal pull-up resistor
 
-- ESP-Prog JTAG Adapter (optional, useful for development)
+- [ESP-Prog JTAG Adapter](https://docs.espressif.com/projects/espressif-esp-iot-solution/en/latest/hw-reference/ESP-Prog_guide.html) (optional, useful for development)
 
-- Logic Analyzer (optional, useful for development)
+- [logic analyzer](https://www.sparkfun.com/products/18627) (optional, useful for development)
 
-- Breadboard and cables as usual
+- breadboard and cables as usual
 
 ## Building and Flashing
 
-Assuming you have [ESP-IDF setup on your machine](https://docs.espressif.com/projects/esp-idf/en/latest/esp32/get-started/index.html), the following commands will build and flash the application on your board:
+Assuming you have [ESP-IDF setup on your machine](https://docs.espressif.com/projects/esp-idf/en/latest/esp32/get-started/index.html), the following commands build and flash the application on the board:
 
 ```sh
 get_idf # if not done already
@@ -44,19 +77,19 @@ idf.py build
 idf.py -p <port> flash monitor
 ```
 
-## Running Tests
+## Tests
 
-Tests have been written for 2 modules:
+Tests have been written for these 2 modules:
 
 - `store_float_into_uint8_arr`
 
 - `ringbuf`
 
-The first has a single function that stores a floating-point number into an array of two 8-bit unsigned integers, and is needed to comply with the BLE GATT specification for temperature and humidity. More info on BLE below.  
-The second is a ring-buffer implementation for floating-point numbers.
+The first converts a floating-point number to a 16-bit integer with resolution of 0.01, and is needed to comply with the BLE GATT specification for temperature and humidity (more details below).  
+The second is a ring-buffer implementation for floating-point numbers, and is needed for storing the most recent 240 temperature and humidity readings.
 
-Both modules are fairly isolated, and could be tested quite easily.
-Tests have been written using [Unity](https://github.com/ThrowTheSwitch/Unity).
+Both modules are fairly isolated, and could be tested quite easily.  
+Tests have been written using [Unity test framework](https://github.com/ThrowTheSwitch/Unity), supported by ESP-IDF out of the box.  
 To run the tests, `cd` into the `test` directory first, then build and flash as usual:
 
 ```sh
@@ -68,11 +101,11 @@ idf.py -p <port> flash monitor
 
 ## Configuring the Envi Sensor
 
-Out of the box, the Envi Sensor is going to grab sensor readings every 30 seconds, and store 240 of them.  
-Doing some very difficult math, readings will be stored for `30 * 240 / 60 = 120` minutes.
+By default, the Envi Sensor is going to collect sensor readings every 30 seconds, and store 240 of them.  
+Doing some very difficult math, readings will be stored for `30 seconds * 240 readings / 60 seconds = 120 minutes`.
 
-These values (`READ_SENSOR_FREQUENCY_MS` and `LCD_RINGBUF_DATA_LEN`) can be updated by the user before building, thanks to `kconfig`.
-The menu you're looking for is located under `Component config ---> Envi Sensor`:
+These values (`READ_SENSOR_FREQUENCY_MS` and `LCD_RINGBUF_DATA_LEN`) can be adjusted by the user upon compilation, using the [KConfig TUI](https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-reference/kconfig.html) (or through the Eclipse plugin / VSCode extension).  
+The menu is located under `Component config ---> Envi Sensor`:
 
 ```sh
 idf.py menuconfig # will open a terminal-based project configuration menu
@@ -81,35 +114,27 @@ idf.py build
 
 TODO LORIS: upload pic
 
-**Good to know:**
-
-Each time historical temperatures and humidities are rendered, a buffer of size `LCD_RINGBUF_DATA_LEN` is placed on the stack of the task `tt_render_lcd_view`.
-Needless to say, the more sensor readings are stored, the bigger the stack size needs to be for `tt_render_lcd_view`.
-For this reason, the `kconfig` menu mentioned above allows you to configure the stack size for that task, too.
-
-TODO LORIS: ? link for determining FreeRTOS stack size
-
 ## Tasks Overview
 
-To understand how the different parts of the system work with each other, it's useful to know what each FreeRTOS Task is responsible for:
+To understand how the different parts of the application work with each other, it's useful to know what each [FreeRTOS](https://www.freertos.org/index.html) Task is responsible for:
 
 - `tt_read_sensor`: periodically reads temperature and humidity from the SHT21 sensor and writes them to the binary queues `binqueue_ble` and `binqueue_lcd`
 
 - `tt_update_ble`: waits for `binqueue_ble` to hold new data, gets it, and updates the temperature/humidity BLE GATT characteristics
 
-- `tt_update_lcd_ring_buffer`: waits for `binqueue_ble` to hold new data, gets it, writes it to the ring-buffers `ringbuf_lcd_temperature` and `ringbuf_lcd_humidity` (which hold the last 120 readings), and signals `binsemaphore_lcd_render`
+- `tt_update_lcd_ring_buffer`: waits for `binqueue_ble` to hold new data, gets it, writes it to the ring-buffers `ringbuf_lcd_temperature` and `ringbuf_lcd_humidity`, and signals `binsemaphore_lcd_render`
 
-- `lcd_switch_isr_handler`: waits from a falling edge, debounces the switch, select the next lcd-view, and signals the binary semaphore `binsemaphore_lcd_render`; this is an interrupt handler, not a task, but its work is important for clarifying how the application works
+- `lcd_switch_isr_handler`: waits from a falling edge, debounces the button, select the next view to be displayed, and signals the binary semaphore `binsemaphore_lcd_render`; this is actually an interrupt handler, not a task
 
 - `tt_render_lcd_view`: waits for `binsemaphore_lcd_render`, and re-renders the appropriate view on the lcd
 
 In addition:
 
-- the module `ble_manager` takes care of the entire Bluetooth setup, abstracting all the details from `tt_update_ble`
+- the module `ble_manager` takes care of setting up the BLE server and updating the temperature and humidity GATT characteristics  
 
-- the module `lcd_switch_manager` takes care of initializing and debouncing the switch responsible for updating the `lcd_view` and signaling `binsemaphore_lcd_render`
+- the module `lcd_manager` takes care of rendering appropriate view on the Nokia 5110 display
 
-- the module `lcd_manager` takes care of rendering the views using the data from `ringbuf_lcd_temperature` and `ringbuf_lcd_humidity`
+- the module `lcd_switch_manager` takes care of initializing the GPIO peripheral for the lcd-button (with internal pull-up resistor and interrupt on falling edges) and debouncing it when needed
 
 ## Hardware Connection
 
@@ -166,71 +191,89 @@ The connection between ESP Board and the other components is as follows:
   |_____ESP32______|                      |_Logic_Analyzer_|
 ```
 
-The JTAG Adapter is of course be removed after development.
+The JTAG adapter and logic analyzer can of course be removed after development.
 
-## External Libraries
+## Push Button Debouncing
 
-- [sht21](https://github.com/dehre/sht21) - driver for the temperature and humidity sensor (I'm the author)
+Many inexpensive buttons will mechanically oscillate for up to tens of milliseconds when touched or released.  
+This can cause the GPIO peripheral to trigger multiple interrupts, and the application to behave as the user pressed the button multiple times, when, in fact, he/she did it only once.
 
-- [ssd1306](https://github.com/lexus2k/ssd1306) - driver for the Nokia 5110 display
-
-## LCD_Switch Debouncing
-
-Many inexpensive switches will mechanically oscillate for up tens of milliseconds when touched or released.
-This would cause the GPIO peripheral to trigger multiple interrupts, and the application to behave as the user touched the switch multiple times, when, in fact, he did it only once.
-
-In the next few lines, I will try to explain concisely the approach I took for debouncing the lcd_switch.
+The next few lines will try to concisely explain the approach took for debouncing the button:
 
 - the `lcd_switch_manager_init` function, after setting up the GPIO pin, creates a new FreeRTOS Task named `tt_debounce_lcd_switch`
 
-- when the switch is touched, the interrupt handler is called, interrupts are disabled, and the binary semaphore `binsemaphore_lcd_switch_debounce` is signaled
+- when the button is touched, the interrupt handler is called, interrupts are disabled, and the binary semaphore `binsemaphore_lcd_switch_debounce` is signaled
 
-- the task `tt_debounce_lcd_switch`, which was waiting for the semaphore, wakes up, waits x milliseconds, and re-enables the interrupts on lcd_switch
+- the task `tt_debounce_lcd_switch`, which was idle waiting for the semaphore, wakes up, waits x milliseconds, and finally re-enables the interrupts on the button
 
-This approach allows a single function call, made in the ISR handler, to debounce the switch without 1. adding delays for the user, and 2. requiring another function call to re-enable interrupts.
+This approach allows a single function call, made in the ISR handler, to acknowledge and debounce the button without 1. adding delays to the application, and 2. requiring a second function call to re-enable interrupts.
 
 ```c
 // main.c
 static void lcd_switch_isr_handler(void *param)
 {
-    lcd_view = (lcd_view + 1) % 3;
-    xSemaphoreGiveFromISR(binsemaphore_lcd_render, NULL);
     lcd_switch_manager_debounce();
+    // do whatever else needs to be done
 }
 ```
 
+## External Libraries
+
+- [sht21](https://github.com/dehre/sht21) - driver for the SHT21 temperature and humidity sensor (I'm the author)
+
+- [ssd1306](https://github.com/lexus2k/ssd1306) - driver for the Nokia 5110 display
+
+## ssd1306 Library Workaround
+
+The `ssd1306` library cannot render non-ASCII characters, so it displays an empty space each time it encounters one, such as `°`:
+
+```c
+ssd1306_printFixed(0,  8, "100°C", STYLE_NORMAL);
+```
+
+To work around this limitation, the `lcd_manager` module `memcpy`'es the existing ASCII font in a static variable, and replaces the bitmap for the `'` character (which isn't needed anyway) with the bitmap for the `°` character.  
+As consequence, each time the `'` is used, the `°` character is displayed.
+
+More info at this link: https://github.com/lexus2k/ssd1306/issues/139#issuecomment-1106239972
+
 ## BLE Setup
 
-The SHT21 sensor readings are advertised over BLE as a GATT Environmental Sensing Service (GATT Assigned Number 0x181A) with two GATT Characteristics.
-The service has two Characteristics, one representing temperature (0x2A6E) and one representing Humidity (0x2A6F).
+The SHT21 sensor readings are advertised over BLE as a [GATT Environmental Sensing Service](https://www.bluetooth.com/specifications/specs/) (GATT Assigned Number `0x181A`).  
+The service has two Characteristics, one representing temperature (`0x2A6E`) and one representing Humidity (`0x2A6F`).
 
-Each GATT Characteristic defines how the data should be represented:
+[Each GATT Characteristic defines how the data should be represented](https://www.bluetooth.com/specifications/specs/gatt-specification-supplement-5/):
 
 - _Temperature_
 
-The data type is a 16-bit signed integer.
-Unit is degrees Celsius with a resolution of 0.01 degrees Celsius.
-Allowed range is: -273.15 to 327.67.
-A value of 0x8000 represents 'value is not known'.
-All other values are prohibited.
-See `GATT Specification Supplement Datasheet Page 223 Section 3.204`.
+From the GATT Specification Supplement Datasheet Page 223 Section 3.204:
+
+> The data type is a 16-bit signed integer.  
+> Unit is degrees Celsius with a resolution of 0.01 degrees Celsius.  
+> Allowed range is: -273.15 to 327.67.  
+> A value of 0x8000 represents 'value is not known'.  
+> All other values are prohibited.
+
 
 - _Humidity_
 
-The data type is a 16-bit unsigned integer.
-Unit is in percent with a resolution of 0.01 percent.
-Allowed range is: 0.00 to 100.00
-A value of 0xFFFF represents 'value is not known'.
-All other values are prohibited.
-See `GATT Specification Supplement Datasheet Page 223 Section 3.204`.
+From the GATT Specification Supplement Datasheet Page 223 Section 3.204:
 
-Using the `sht21` library, both temperature and humidity are retrieved as floating point numbers.
-The Temperature GATT Characteristic, however, requires a signed 16-bit value (-32768 32767), so the captured value (e.g. 9.87°C) is multiplied by 100, then converted to an integer (e.g. 987).  
+> The data type is a 16-bit unsigned integer.  
+> Unit is in percent with a resolution of 0.01 percent.  
+> Allowed range is: 0.00 to 100.00.  
+> A value of 0xFFFF represents 'value is not known'.  
+> All other values are prohibited.
+
+Using the `sht21` library, both temperature and humidity are retrieved as floating point numbers.  
+The Temperature GATT Characteristic, however, requires a signed 16-bit value, so the captured value (e.g. 9.87°C) is multiplied by 100, then converted to an integer (e.g. 987).  
 Similar reasoning goes for the Humidity GATT Characteristic.
+
+For a nice overview of BLE and GATT, check out [this article from Adafruit](https://learn.adafruit.com/introduction-to-bluetooth-low-energy/gatt).
 
 ## BLE Events Lifecycle
 
-This log shows the order in which BLE events are triggered when a BLE-client (i.e. smartphone) connects to the ESP32. It might be useful for debugging.
+This log shows the order in which BLE events are triggered when a BLE-client (i.e. smartphone) connects to the ESP32.  
+It can be useful for debugging:
 
 ```sh
 #
@@ -245,7 +288,7 @@ W (967) gatts_profile_event_handler: ESP_GATTS_START_EVT
 W (977) gap_event_handler: ESP_GAP_BLE_ADV_START_COMPLETE_EVT
 
 #
-# Connecting to application from BLE client
+# Connecting to the Envi Sensor from a BLE client
 #
 
 W (17257) gatts_profile_event_handler: ESP_GATTS_CONNECT_EVT
@@ -253,7 +296,7 @@ W (17347) gatts_profile_event_handler: ESP_GATTS_MTU_EVT
 W (17677) gap_event_handler: ESP_GAP_BLE_UPDATE_CONN_PARAMS_EVT
 
 #
-# Reading temperature characteristic 3 times
+# Reading the temperature characteristic 3 times
 #
 
 W (20197) gatts_profile_event_handler: ESP_GATTS_READ_EVT
@@ -261,20 +304,9 @@ W (22717) gatts_profile_event_handler: ESP_GATTS_READ_EVT
 W (23587) gatts_profile_event_handler: ESP_GATTS_READ_EVT
 
 #
-# Disconnecting from application
+# Disconnecting the BLE client from the Envi Sensor
 #
 
 W (27577) gatts_profile_event_handler: ESP_GATTS_DISCONNECT_EVT
 W (27597) gap_event_handler: ESP_GAP_BLE_ADV_START_COMPLETE_EVT
 ```
-
-## Little ssd1306 Library Workaround
-
-The `ssd1306` library cannot render non-ASCII character, so it displays an empty space each time it encounters one, such as the `°` degrees symbol:
-
-```c
-ssd1306_printFixed(0,  8, "100°C", STYLE_NORMAL);
-```
-
-Without creating a new font that included extended-ASCII characters, a copy of the existing font is made and the `'` character (which wasn't needed anyway) replaced by the bitmap for the `°` character.
-See: https://github.com/lexus2k/ssd1306/issues/139#issuecomment-1106239972
