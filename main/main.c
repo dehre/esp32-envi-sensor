@@ -4,13 +4,14 @@
 
 #include "ble_manager.h"
 #include "debug_heartbeat.h"
+#include "lcd_manager.h"
+#include "lcd_switch_manager.h"
+
 #include "esp_err.h"
 #include "esp_log.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/queue.h"
 #include "freertos/task.h"
-#include "lcd_manager.h"
-#include "lcd_switch_manager.h"
 #include "sht21.h"
 
 //==================================================================================================

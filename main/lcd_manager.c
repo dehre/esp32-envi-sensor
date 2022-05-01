@@ -3,13 +3,12 @@
 //==================================================================================================
 
 #include "lcd_manager.h"
-#include "esp_err.h"
+
 #include "ringbuf.h"
-#include "ssd1306.h"
 
 #include "esp_log.h"
+#include "ssd1306.h"
 #include <assert.h>
-#include <stdint.h>
 #include <stdio.h>
 #include <string.h>
 

@@ -3,8 +3,7 @@
 //==================================================================================================
 
 #include "ringbuf.h"
-#include "freertos/FreeRTOS.h"
-#include "freertos/semphr.h"
+
 #include <assert.h>
 #include <math.h>
 #include <stdlib.h>
