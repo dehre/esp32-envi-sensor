@@ -49,6 +49,8 @@ TODO LORIS: upload link to youtube video
 
 - [BLE Events Lifecycle](#ble-events-lifecycle)
 
+- [Memory Usage](#memory-usage)
+
 ## Bill of Materials
 
 - [ESP32-DevKitC V4](https://docs.espressif.com/projects/esp-idf/en/latest/esp32/hw-reference/esp32/get-started-devkitc.html)
@@ -130,7 +132,7 @@ To understand how the different parts of the application work with each other, i
 
 In addition:
 
-- the module `ble_manager` takes care of setting up the BLE server and updating the temperature and humidity GATT characteristics  
+- the module `ble_manager` takes care of setting up the BLE server and updating the temperature and humidity GATT characteristics
 
 - the module `lcd_manager` takes care of rendering appropriate view on the Nokia 5110 display
 
@@ -253,7 +255,6 @@ From the GATT Specification Supplement Datasheet Page 223 Section 3.204:
 > A value of 0x8000 represents 'value is not known'.  
 > All other values are prohibited.
 
-
 - _Humidity_
 
 From the GATT Specification Supplement Datasheet Page 223 Section 3.204:
@@ -310,3 +311,44 @@ W (23587) gatts_profile_event_handler: ESP_GATTS_READ_EVT
 W (27577) gatts_profile_event_handler: ESP_GATTS_DISCONNECT_EVT
 W (27597) gap_event_handler: ESP_GAP_BLE_ADV_START_COMPLETE_EVT
 ```
+
+## Memory Usage
+
+ESP32's internal memory (SRAM) is divided into 3 memory blocks: SRAM0, SRAM1 and SRAM2.
+
+The SRAM is used in two ways:
+
+- instruction memory, IRAM, (used for code execution — text data), and
+
+- data memory, DRAM, used for BSS, data, heap.
+
+SRAM0 is used as IRAM.  
+SRAM1 and SRAM2 are used as DRAM.
+
+![](readme_assets/esp32-memory-layout.png)
+
+The memory information about the Envi Sensor can be retrieved via the command `idf.py size`:
+
+```
+Total sizes:
+Used static DRAM:   39644 bytes (  84936 remain, 31.8% used)
+      .data size:   18516 bytes
+      .bss  size:   21128 bytes
+Used static IRAM:  104219 bytes (  26853 remain, 79.5% used)
+      .text size:  103192 bytes
+   .vectors size:    1027 bytes
+Used stat D/IRAM:  143863 bytes ( 111789 remain, 56.3% used)
+      .data size:   18516 bytes
+      .bss  size:   21128 bytes
+      .text size:  103192 bytes
+   .vectors size:    1027 bytes
+Used Flash size :  503631 bytes
+      .text     :  396451 bytes
+      .rodata   :  106924 bytes
+Total image size:  749101 bytes (.bin may be padded larger)
+```
+
+Although technically SRAM1 could be used both as IRAM and DRAM, for practical purposes ESP-IDF uses SRAM1 as DRAM.  
+Nonetheless, it's still shown as D/IRAM in the snippet above.
+
+For more information, here's [a very nice article about ESP32's memory layout](https://blog.espressif.com/esp32-programmers-memory-model-259444d89387).
