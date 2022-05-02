@@ -172,7 +172,7 @@ static void render_historical_temperature(void)
     ssd1306_printFixed(8, 0, "Temperature", STYLE_ITALIC);
     ssd1306_printFixed(16, 8, "Analysis", STYLE_ITALIC);
 
-    float sorted_temps[CONFIG_LCD_RINGBUF_DATA_LEN];
+    static float sorted_temps[CONFIG_LCD_RINGBUF_DATA_LEN];
     size_t sorted_temps_len = ringbuf_getallsorted(&ringbuf_lcd_temperature, sorted_temps);
     if (sorted_temps_len == 0)
     {
@@ -195,7 +195,7 @@ static void render_historical_humidity(void)
     ssd1306_printFixed(16, 0, "Humidity", STYLE_ITALIC);
     ssd1306_printFixed(16, 8, "Analysis", STYLE_ITALIC);
 
-    float sorted_humids[CONFIG_LCD_RINGBUF_DATA_LEN];
+    static float sorted_humids[CONFIG_LCD_RINGBUF_DATA_LEN];
     size_t sorted_humids_len = ringbuf_getallsorted(&ringbuf_lcd_humidity, sorted_humids);
     if (sorted_humids_len == 0)
     {
