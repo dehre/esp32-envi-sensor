@@ -7,6 +7,7 @@
 #include "store_float_into_uint8_arr.h"
 
 #include "esp_bt.h"
+#include "esp_bt_defs.h"
 #include "esp_bt_main.h"
 #include "esp_gap_ble_api.h"
 #include "esp_gatt_common_api.h"
@@ -98,8 +99,8 @@ static esp_ble_adv_data_t adv_data = {
     .set_scan_rsp = false,
     .include_name = true,
     .include_txpower = true,
-    .min_interval = 0x0006, // slave connection min interval, Time = min_interval * 1.25 msec
-    .max_interval = 0x0010, // slave connection max interval, Time = max_interval * 1.25 msec
+    .min_interval = ESP_BLE_CONN_INT_MAX, // maximum value for slave connection interval
+    .max_interval = 0xFFFF,               // unspecified value
     .appearance = 0x00,
     .manufacturer_len = 0,
     .p_manufacturer_data = NULL,
@@ -110,9 +111,11 @@ static esp_ble_adv_data_t adv_data = {
     .flag = (ESP_BLE_ADV_FLAG_GEN_DISC | ESP_BLE_ADV_FLAG_BREDR_NOT_SPT),
 };
 
+/* For the iOS system, please refer to Apple official documents about the BLE advertising parameters
+ * restrictions: https://developer.apple.com/library/archive/qa/qa1931/_index.html */
 static esp_ble_adv_params_t adv_params = {
-    .adv_int_min = 0x20,
-    .adv_int_max = 0x40,
+    .adv_int_min = 0x0808, // advertising happens every 0x0808 * 0.625ms = 1285ms
+    .adv_int_max = 0x0808, // advertising happens every 0x0808 * 0.625ms = 1285ms
     .adv_type = ADV_TYPE_IND,
     .own_addr_type = BLE_ADDR_TYPE_PUBLIC,
     .channel_map = ADV_CHNL_ALL,
@@ -328,13 +331,10 @@ static void gatts_profile_event_handler(esp_gatts_cb_event_t event, esp_gatt_if_
         esp_log_buffer_hex(ESP_LOG_TAG, param->connect.remote_bda, 6);
         esp_ble_conn_update_params_t conn_params = {0};
         memcpy(conn_params.bda, param->connect.remote_bda, sizeof(esp_bd_addr_t));
-        /* For the iOS system, please refer to Apple official documents about the BLE connection parameters
-         * restrictions. */
         conn_params.latency = 0;
-        conn_params.max_int = 0x20; // max_int = 0x20*1.25ms = 40ms
-        conn_params.min_int = 0x10; // min_int = 0x10*1.25ms = 20ms
-        conn_params.timeout = 400;  // timeout = 400*10ms = 4000ms
-        // start sent the update connection parameters to the peer device.
+        conn_params.max_int = ESP_BLE_CONN_INT_MAX;
+        conn_params.min_int = ESP_BLE_CONN_INT_MAX;
+        conn_params.timeout = ESP_BLE_CONN_SUP_TOUT_MAX;
         esp_ble_gap_update_conn_params(&conn_params);
         break;
     case ESP_GATTS_DISCONNECT_EVT:

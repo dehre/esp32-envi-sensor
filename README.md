@@ -16,12 +16,14 @@ With the help of the onboard button, the user can choose among three different v
 
 Both the reading frequency (default: every 30 sec) and the number of readings stored (default: 240) can be adjusted upon compilation using the [KConfig TUI](https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-reference/kconfig.html) provided with the ESP-IDF installation (see below).
 
+TODO LORIS: update link iOS
+
 Last but not least, the Envi Sensor acts as a [Bluetooth Low Energy](https://learn.adafruit.com/introduction-to-bluetooth-low-energy) (BLE) GATT Server, from which a smartphone (or any BLE-enabled device) can read the last temperature and humidity.  
 This [example iOS application](github.com/dehre/ios-envi-sensor), acting as a GATT Client, connects to the Envi Sensor and requests new data every 5 seconds.
 
 TODO LORIS: upload picture
 
-TODO LORIS: upload link to youtube video
+TODO LORIS: upload link to youtube video, stating that reading frequency has been decreased to 500ms 
 
 ## README Sections
 
@@ -50,6 +52,8 @@ TODO LORIS: upload link to youtube video
 - [BLE Events Lifecycle](#ble-events-lifecycle)
 
 - [Memory Usage](#memory-usage)
+
+- [Power Consumption](#power-consumption)
 
 ## Bill of Materials
 
@@ -352,3 +356,32 @@ Although technically SRAM1 could be used both as IRAM and DRAM, for practical pu
 Nonetheless, it's still shown as D/IRAM in the snippet above.
 
 For more information, here's [a very nice article about ESP32's memory layout](https://blog.espressif.com/esp32-programmers-memory-model-259444d89387).
+
+## Power Consumption
+
+The ESP32-DevKitC V4 can be powered in [one of these three ways](https://docs.espressif.com/projects/esp-idf/en/latest/esp32/hw-reference/esp32/get-started-devkitc.html#power-supply-options):
+
+1. micro-USB port - also used for flashing and monitoring the application
+
+2. unregulated power source - [through the onboard AMS1117-3.3 voltage regulator](https://dl.espressif.com/dl/schematics/esp32_devkitc_v4-sch.pdf), anything between 4.8V and 12V [should work](https://datasheet.lcsc.com/szlcsc/2001081204_Shikues-AMS1117-1-2_C475600.pdf)
+
+3. regulated 3.3V - bypassing the voltage regulator
+
+As stated in the official docs:
+
+> The power supply must be provided using one and only one of the options above, otherwise the board and/or the power supply source can be damaged.
+
+Being a BLE GATT server, the Envi Sensor is a quite power-hungry device.  
+Power saving modes are unfortunately not an option, as [in both Deep-sleep and Light-sleep the wireless peripherals are powered down](https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-reference/system/sleep_modes.html#wi-fi-bluetooth-and-sleep-modes).
+
+The biggest cut in current consumption has been achieved by reducing the BLE advertising frequency to 1285ms.  
+Apple [imposes some limitations](https://developer.apple.com/library/archive/qa/qa1931/_index.html) on Bluetooth advertising parameters, hence this `1285` magic number.  
+With this setup, 40mA are drawn in advertising mode, and about 52mA are drawn when a connection is established between the BLE client and the Envi Sensor (measured by connecting a multimeter in series with the power-source).
+
+Based on this data, powering the device on batteries might not be the best option.  
+Without going into detailed calculations, we could estimate a battery-life of less than a day with a [1200mAh Li-ion battery](https://www.adafruit.com/product/258), and a battery-life of 5/6 days with this [massive 6600mAh Li-ion battery](https://www.adafruit.com/product/353).
+
+Sticking to the "batteries solution", it would be fair to allow the user to charge them while the circuit is running.  
+The easiest solution, in this case, would be to pick an ESP32 microcontroller with onboard battery-charger, such as the [FireBeetle](https://www.dfrobot.com/product-1590.html), to name one.
+
+Alternatively, an on-off switch could allow the Envi Sensor to boot with Bluetooth disabled: the device could then enter Light-sleep every 30 seconds, between sensor readings, which would cut down power consumption by a big amount.
