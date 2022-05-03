@@ -23,7 +23,7 @@ This [example iOS application](github.com/dehre/ios-envi-sensor), acting as a GA
 
 TODO LORIS: upload picture
 
-TODO LORIS: upload link to youtube video, stating that reading frequency has been decreased to 500ms 
+TODO LORIS: upload link to youtube video, stating that reading frequency has been decreased to 500ms
 
 ## README Sections
 
@@ -39,11 +39,13 @@ TODO LORIS: upload link to youtube video, stating that reading frequency has bee
 
 - [Tasks Overview](#tasks-overview)
 
+- [Tasks Stack Size](#tasks-stack-size)
+
 - [Hardware Connection](#hardware-connection)
 
 - [Push Button Debouncing](#push-button-debouncing)
 
-- [External Libraries](#external-libraries)
+- [External Components](#external-components)
 
 - [ssd1306 Library Workaround](#ssd1306-library-workaround)
 
@@ -142,6 +144,21 @@ In addition:
 
 - the module `lcd_switch_manager` takes care of initializing the GPIO peripheral for the lcd-button (with internal pull-up resistor and interrupt on falling edges) and debouncing it when needed
 
+## Tasks Stack Size
+
+Each FreeRTOS task requires RAM that is used to hold the task state, and used by the task as its stack.  
+If a task is created using [xTaskCreate](https://www.freertos.org/a00125.html), then the required RAM is automatically allocated from the FreeRTOS heap.
+
+As recommended by [the FreeRTOS FAQ](https://www.freertos.org/FAQMem.html#StackSize), tasks' stack size has been tuned taking a pragmatic trial and error approach using the [uxTaskGetStackHighWaterMark](https://www.freertos.org/uxTaskGetStackHighWaterMark.html) API function.  
+With each task being given 2048 words, these are the registered high water marks in words:
+
+```
+tt_read_sensor:            404 words (1616 bytes)
+tt_update_ble:             420 words (1680 bytes)
+tt_update_lcd_ring_buffer: 436 words (1744 bytes)
+tt_render_lcd_view:        460 words (1840 bytes)
+```
+
 ## Hardware Connection
 
 The connection between ESP Board and the other components is as follows:
@@ -223,7 +240,7 @@ static void lcd_switch_isr_handler(void *param)
 }
 ```
 
-## External Libraries
+## External Components
 
 - [sht21](https://github.com/dehre/sht21) - driver for the SHT21 temperature and humidity sensor (I'm the author)
 

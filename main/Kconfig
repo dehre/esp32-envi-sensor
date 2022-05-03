@@ -6,6 +6,7 @@ menu "Envi Sensor"
             The temperature and humidity sensor can be read more or less often.
             Together with CONFIG_LCD_RINGBUF_DATA_LEN, this value will impact
             how long historical data will be stored.
+
     config LCD_RINGBUF_DATA_LEN
         int "Configure number of readings stored in each ring-buffer"
         default 240
@@ -13,11 +14,4 @@ menu "Envi Sensor"
             The number of readings held in each of ringbuf_lcd_temperature and ringbuf_lcd_humidity.
             Together with CONFIG_READ_SENSOR_FREQUENCY_MS, this value will impact
             how long historical data will be stored.
-    config STACK_DEPTH_TASK_RENDER_LCD_VIEW
-        int "The stack's size for the task tt_render_lcd_view"
-        default 2048
-        help
-            The stack size fo the task tt_render_lcd_view needs to grow along with the number of
-            readings stored in the ring buffer. Likewise, the stack size can be shrinked if the
-            ringbuffer is configured to be smaller.
 endmenu
