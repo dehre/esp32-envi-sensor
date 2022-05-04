@@ -138,7 +138,7 @@ To understand how the different parts of the application work with each other, i
 
 In addition:
 
-- the module `ble_manager` takes care of setting up the BLE server and updating the temperature and humidity GATT characteristics
+- the module `ble` takes care of setting up the BLE server and updating the temperature and humidity GATT characteristics
 
 - the module `lcd_manager` takes care of rendering appropriate view on the Nokia 5110 display
 

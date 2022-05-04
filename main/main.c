@@ -2,7 +2,7 @@
 // INCLUDES
 //==================================================================================================
 
-#include "ble_manager.h"
+#include "ble.h"
 #include "button_manager.h"
 #include "debug_heartbeat.h"
 #include "lcd_manager.h"
@@ -83,7 +83,7 @@ void app_main(void)
     binsemaphore_lcd_render = xSemaphoreCreateBinary();
 
     ESP_ERROR_CHECK(sht21_init(0, GPIO_NUM_32, GPIO_NUM_33, sht21_i2c_speed_standard));
-    ESP_ERROR_CHECK(ble_manager_init());
+    ESP_ERROR_CHECK(ble_init());
     ESP_ERROR_CHECK(button_manager_init(button_isr_handler));
     ESP_ERROR_CHECK(lcd_manager_init());
     ESP_ERROR_CHECK(debug_heartbeat_init(GPIO_NUM_25));
@@ -164,8 +164,8 @@ static void tt_update_ble(void *param)
         sensor_reading_t reading;
         if (xQueueReceive(binqueue_ble, &reading, portMAX_DELAY))
         {
-            IFERR_LOG(ble_manager_write_temperature(reading.temperature), "failed to write temperature");
-            IFERR_LOG(ble_manager_write_humidity(reading.humidity), "failed to write humidity");
+            IFERR_LOG(ble_write_temperature(reading.temperature), "failed to write temperature");
+            IFERR_LOG(ble_write_humidity(reading.humidity), "failed to write humidity");
         }
     }
 }

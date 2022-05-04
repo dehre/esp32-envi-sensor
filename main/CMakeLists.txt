@@ -1,6 +1,6 @@
 set(c_SRCS
     main.c
-    ble_manager.c
+    ble.c
     lcd_manager.c
     button_manager.c
     ringbuf.c

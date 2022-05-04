@@ -2,7 +2,7 @@
 // INCLUDES
 //==================================================================================================
 
-#include "ble_manager.h"
+#include "ble.h"
 
 #include "store_float_into_uint8_arr.h"
 
@@ -24,7 +24,7 @@
 // DEFINES - MACROS
 //==================================================================================================
 
-#define ESP_LOG_TAG "BLE_MANAGER"
+#define ESP_LOG_TAG "ENVI_SENSOR_BLE"
 #include "iferr.h"
 
 #define PROFILE_NUM 1
@@ -191,7 +191,7 @@ static const esp_gatts_attr_db_t gatt_db[IDX_COUNT] =
 // GLOBAL FUNCTIONS
 //==================================================================================================
 
-esp_err_t ble_manager_init(void)
+esp_err_t ble_init(void)
 {
     ESP_LOGI(ESP_LOG_TAG, "%s - initialize", __func__);
     esp_err_t ret = nvs_flash_init();
@@ -217,7 +217,7 @@ esp_err_t ble_manager_init(void)
     return ESP_OK;
 }
 
-esp_err_t ble_manager_write_temperature(float temperature)
+esp_err_t ble_write_temperature(float temperature)
 {
     ESP_LOGD(ESP_LOG_TAG, "%s - write %f", __func__, temperature);
     // See: GATT Specification Supplement Datasheet Page 223 Section 3.204
@@ -229,7 +229,7 @@ esp_err_t ble_manager_write_temperature(float temperature)
     return ESP_OK;
 }
 
-esp_err_t ble_manager_write_humidity(float humidity)
+esp_err_t ble_write_humidity(float humidity)
 {
     ESP_LOGD(ESP_LOG_TAG, "%s - write %f", __func__, humidity);
     // See: GATT Specification Supplement Datasheet Page 146 Section 3.114
