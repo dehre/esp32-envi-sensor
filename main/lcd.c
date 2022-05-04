@@ -42,9 +42,9 @@
 
 typedef enum
 {
-    LCD_VIEW_LAST_READINGS = 0,
-    LCD_VIEW_HISTORICAL_TEMPERATURE,
-    LCD_VIEW_HISTORICAL_HUMIDITY,
+    LCD_VIEW_CURRENT_READINGS = 0,
+    LCD_VIEW_TEMPERATURE_ANALYSIS,
+    LCD_VIEW_HUMIDITY_ANALYSIS,
     LCD_VIEW_COUNT
 } lcd_view_t;
 
@@ -54,11 +54,11 @@ typedef enum
 
 static void initialize_my_font_6x8(void);
 
-static void render_last_readings(void);
+static void render_current_readings(void);
 
-static void render_historical_temperature(void);
+static void render_temperature_analysis(void);
 
-static void render_historical_humidity(void);
+static void render_humidity_analysis(void);
 
 //==================================================================================================
 // STATIC VARIABLES
@@ -81,7 +81,7 @@ static float ringbuf_lcd_temperature_data_[CONFIG_LCD_RINGBUF_DATA_LEN];
 static float ringbuf_lcd_humidity_data_[CONFIG_LCD_RINGBUF_DATA_LEN];
 
 // lcd_view determines which view is rendered on the lcd
-static lcd_view_t lcd_view = LCD_VIEW_LAST_READINGS;
+static lcd_view_t lcd_view = LCD_VIEW_CURRENT_READINGS;
 
 //==================================================================================================
 // GLOBAL FUNCTIONS
@@ -117,12 +117,12 @@ void lcd_render(void)
 {
     switch (lcd_view)
     {
-    case LCD_VIEW_LAST_READINGS:
-        return render_last_readings();
-    case LCD_VIEW_HISTORICAL_TEMPERATURE:
-        return render_historical_temperature();
-    case LCD_VIEW_HISTORICAL_HUMIDITY:
-        return render_historical_humidity();
+    case LCD_VIEW_CURRENT_READINGS:
+        return render_current_readings();
+    case LCD_VIEW_TEMPERATURE_ANALYSIS:
+        return render_temperature_analysis();
+    case LCD_VIEW_HUMIDITY_ANALYSIS:
+        return render_humidity_analysis();
     default:
         assert(0);
     }
@@ -142,7 +142,7 @@ static void initialize_my_font_6x8(void)
     }
 }
 
-static void render_last_readings(void)
+static void render_current_readings(void)
 {
     ssd1306_clearScreen();
     ssd1306_printFixed(24, 0, "Envi", STYLE_ITALIC);
@@ -166,7 +166,7 @@ static void render_last_readings(void)
     ssd1306_printFixed(0, 40, line_buffer, STYLE_NORMAL);
 }
 
-static void render_historical_temperature(void)
+static void render_temperature_analysis(void)
 {
     ssd1306_clearScreen();
     ssd1306_printFixed(8, 0, "Temperature", STYLE_ITALIC);
@@ -189,7 +189,7 @@ static void render_historical_temperature(void)
     ssd1306_printFixed(0, 40, line_buffer, STYLE_NORMAL);
 }
 
-static void render_historical_humidity(void)
+static void render_humidity_analysis(void)
 {
     ssd1306_clearScreen();
     ssd1306_printFixed(16, 0, "Humidity", STYLE_ITALIC);
