@@ -132,7 +132,7 @@ To understand how the different parts of the application work with each other, i
 
 - `tt_update_lcd_ring_buffer`: waits for `binqueue_ble` to hold new data, gets it, writes it to the ring-buffers `ringbuf_lcd_temperature` and `ringbuf_lcd_humidity`, and signals `binsemaphore_lcd_render`
 
-- `lcd_switch_isr_handler`: waits from a falling edge, debounces the button, select the next view to be displayed, and signals the binary semaphore `binsemaphore_lcd_render`; this is actually an interrupt handler, not a task
+- `button_isr_handler`: waits from a falling edge, debounces the button, select the next view to be displayed, and signals the binary semaphore `binsemaphore_lcd_render`; this is actually an interrupt handler, not a task
 
 - `tt_render_lcd_view`: waits for `binsemaphore_lcd_render`, and re-renders the appropriate view on the lcd
 
@@ -142,7 +142,7 @@ In addition:
 
 - the module `lcd_manager` takes care of rendering appropriate view on the Nokia 5110 display
 
-- the module `lcd_switch_manager` takes care of initializing the GPIO peripheral for the lcd-button (with internal pull-up resistor and interrupt on falling edges) and debouncing it when needed
+- the module `button_manager` takes care of initializing the GPIO peripheral for the lcd-button (with internal pull-up resistor and interrupt on falling edges) and debouncing it when needed
 
 ## Tasks Stack Size
 
@@ -223,19 +223,19 @@ This can cause the GPIO peripheral to trigger multiple interrupts, and the appli
 
 The next few lines will try to concisely explain the approach took for debouncing the button:
 
-- the `lcd_switch_manager_init` function, after setting up the GPIO pin, creates a new FreeRTOS Task named `tt_debounce_lcd_switch`
+- the `button_manager_init` function, after setting up the GPIO pin, creates a new FreeRTOS Task named `tt_debounce_button`
 
-- when the button is touched, the interrupt handler is called, interrupts are disabled, and the binary semaphore `binsemaphore_lcd_switch_debounce` is signaled
+- when the button is touched, the interrupt handler is called, interrupts are disabled, and the binary semaphore `binsemaphore_button_debounce` is signaled
 
-- the task `tt_debounce_lcd_switch`, which was idle waiting for the semaphore, wakes up, waits x milliseconds, and finally re-enables the interrupts on the button
+- the task `tt_debounce_button`, which was idle waiting for the semaphore, wakes up, waits x milliseconds, and finally re-enables the interrupts on the button
 
 This approach allows a single function call, made in the ISR handler, to acknowledge and debounce the button without 1. adding delays to the application, and 2. requiring a second function call to re-enable interrupts.
 
 ```c
 // main.c
-static void lcd_switch_isr_handler(void *param)
+static void button_isr_handler(void *param)
 {
-    lcd_switch_manager_debounce();
+    button_manager_debounce();
     // do whatever else needs to be done
 }
 ```
