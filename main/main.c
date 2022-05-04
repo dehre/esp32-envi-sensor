@@ -3,7 +3,7 @@
 //==================================================================================================
 
 #include "ble.h"
-#include "button_manager.h"
+#include "button.h"
 #include "debug_heartbeat.h"
 #include "lcd.h"
 
@@ -84,7 +84,7 @@ void app_main(void)
 
     ESP_ERROR_CHECK(sht21_init(0, GPIO_NUM_32, GPIO_NUM_33, sht21_i2c_speed_standard));
     ESP_ERROR_CHECK(ble_init());
-    ESP_ERROR_CHECK(button_manager_init(button_isr_handler));
+    ESP_ERROR_CHECK(button_init(button_isr_handler));
     ESP_ERROR_CHECK(lcd_init());
     ESP_ERROR_CHECK(debug_heartbeat_init(GPIO_NUM_25));
 
@@ -109,7 +109,7 @@ static void create_task(TaskFunction_t fn, const char *const name, UBaseType_t p
 
 static void button_isr_handler(void *param)
 {
-    button_manager_debounce();
+    button_debounce();
     lcd_select_next_view();
     xSemaphoreGiveFromISR(binsemaphore_lcd_render, NULL);
 }

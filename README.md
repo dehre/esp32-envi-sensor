@@ -142,7 +142,7 @@ In addition:
 
 - the module `lcd` takes care of rendering appropriate view on the Nokia 5110 display
 
-- the module `button_manager` takes care of initializing the GPIO peripheral for the lcd-button (with internal pull-up resistor and interrupt on falling edges) and debouncing it when needed
+- the module `button` takes care of initializing the GPIO peripheral for the lcd-button (with internal pull-up resistor and interrupt on falling edges) and debouncing it when needed
 
 ## Tasks Stack Size
 
@@ -223,7 +223,7 @@ This can cause the GPIO peripheral to trigger multiple interrupts, and the appli
 
 The next few lines will try to concisely explain the approach took for debouncing the button:
 
-- the `button_manager_init` function, after setting up the GPIO pin, creates a new FreeRTOS Task named `tt_debounce_button`
+- the `button_init` function, after setting up the GPIO pin, creates a new FreeRTOS Task named `tt_debounce_button`
 
 - when the button is touched, the interrupt handler is called, interrupts are disabled, and the binary semaphore `binsemaphore_button_debounce` is signaled
 
@@ -235,7 +235,7 @@ This approach allows a single function call, made in the ISR handler, to acknowl
 // main.c
 static void button_isr_handler(void *param)
 {
-    button_manager_debounce();
+    button_debounce();
     // do whatever else needs to be done
 }
 ```

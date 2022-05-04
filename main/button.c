@@ -2,7 +2,7 @@
 // INCLUDES
 //==================================================================================================
 
-#include "button_manager.h"
+#include "button.h"
 
 #include "esp_log.h"
 #include "freertos/FreeRTOS.h"
@@ -13,7 +13,7 @@
 // DEFINES - MACROS
 //==================================================================================================
 
-#define ESP_LOG_TAG "MAIN"
+#define ESP_LOG_TAG "ENVI_SENSOR_BUTTON"
 #include "iferr.h"
 
 // TODO LORIS: header file for all pins?
@@ -48,7 +48,7 @@ static SemaphoreHandle_t binsemaphore_button_debounce = NULL;
 // GLOBAL FUNCTIONS
 //==================================================================================================
 
-esp_err_t button_manager_init(gpio_isr_t isr_handler)
+esp_err_t button_init(gpio_isr_t isr_handler)
 {
     gpio_config_t gpio_conf = {0};
     gpio_conf.intr_type = GPIO_INTR_NEGEDGE;
@@ -66,7 +66,7 @@ esp_err_t button_manager_init(gpio_isr_t isr_handler)
     return ESP_OK;
 }
 
-void button_manager_debounce(void)
+void button_debounce(void)
 {
     gpio_intr_disable(BUTTON_PIN);
     xSemaphoreGiveFromISR(binsemaphore_button_debounce, NULL);
