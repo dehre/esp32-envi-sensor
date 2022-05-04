@@ -10,6 +10,7 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/semphr.h"
 #include "freertos/task.h"
+#include <assert.h>
 
 //==================================================================================================
 // DEFINES - MACROS
@@ -76,7 +77,7 @@ static void create_task_debounce_button(void)
     TaskHandle_t task_handle = NULL;
     xTaskCreate(task_debounce_button, "task_debounce_button", TASK_STACK_DEPTH, NULL, TASK_PRIORITY_DEBOUNCE_BUTTON,
                 &task_handle);
-    configASSERT(task_handle);
+    assert(task_handle);
 }
 
 static void task_debounce_button(void *param)

@@ -14,6 +14,7 @@
 #include "freertos/queue.h"
 #include "freertos/task.h"
 #include "sht21.h"
+#include <assert.h>
 
 //==================================================================================================
 // DEFINES - MACROS
@@ -93,7 +94,7 @@ static void create_task(TaskFunction_t fn, const char *const name, UBaseType_t p
 {
     TaskHandle_t task_handle = NULL;
     xTaskCreate(fn, name, TASK_STACK_DEPTH, NULL, priority, &task_handle);
-    configASSERT(task_handle);
+    assert(task_handle);
 }
 
 static void button_isr_handler(void *param)
@@ -131,12 +132,12 @@ static void task_read_sensor(void *param)
         if (xQueueSend(binqueue_ble, (void *)&reading, portMAX_DELAY) != pdPASS)
         {
             ESP_LOGW(ESP_LOG_TAG, "last sensor reading not received from BLE peripheral, overwriting with new value");
-            configASSERT(xQueueOverwrite(binqueue_ble, (void *)&reading));
+            assert(xQueueOverwrite(binqueue_ble, (void *)&reading));
         }
         if (xQueueSend(binqueue_lcd, (void *)&reading, portMAX_DELAY) != pdPASS)
         {
             ESP_LOGW(ESP_LOG_TAG, "last sensor reading not received from monitor, overwriting with new value");
-            configASSERT(xQueueOverwrite(binqueue_lcd, (void *)&reading));
+            assert(xQueueOverwrite(binqueue_lcd, (void *)&reading));
         }
         if (xSemaphoreGive(binsemaphore_lcd_render) != pdTRUE)
         {
