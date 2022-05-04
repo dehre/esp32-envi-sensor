@@ -4,6 +4,8 @@
 
 #include "button.h"
 
+#include "envi_config.h"
+
 #include "esp_log.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/semphr.h"
@@ -15,13 +17,6 @@
 
 #define ESP_LOG_TAG "ENVI_SENSOR_BUTTON"
 #include "iferr.h"
-
-// TODO LORIS: header file for all pins?
-#define BUTTON_PIN 21
-#define BUTTON_BIT_MASK (1ULL << BUTTON_PIN)
-
-#define TASK_STACK_DEPTH 2048
-#define TASK_PRIORITY_DEBOUNCE_BUTTON 2
 
 #define DEBOUNCE_DELAY_MS 500
 
@@ -52,7 +47,7 @@ esp_err_t button_init(gpio_isr_t isr_handler)
 {
     gpio_config_t gpio_conf = {0};
     gpio_conf.intr_type = GPIO_INTR_NEGEDGE;
-    gpio_conf.pin_bit_mask = BUTTON_BIT_MASK;
+    gpio_conf.pin_bit_mask = (1ULL << BUTTON_PIN);
     gpio_conf.mode = GPIO_MODE_INPUT;
     gpio_conf.pull_up_en = 1;
     IFERR_RETE(gpio_config(&gpio_conf), "failed button setup");

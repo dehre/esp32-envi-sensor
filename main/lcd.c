@@ -4,6 +4,7 @@
 
 #include "lcd.h"
 
+#include "envi_config.h"
 #include "ringbuf.h"
 
 #include "esp_log.h"
@@ -25,16 +26,6 @@
 #define CHAR_HEIGHT 8
 #define SCREEN_WIDTH (84 / CHAR_WIDTH)
 #define SCREEN_HEIGHT (48 / CHAR_HEIGHT)
-
-// #define GND_PIN   -> GND
-// #define LIGHT_PIN -> 470Ω -> GND (leave it unconnected if you don't want to use it)
-// #define VCC_PIN   -> 3V3
-
-#define CLK_PIN 18 // Clock (hardcoded in ssd1306 lib)
-#define DIN_PIN 23 // MOSI  (hardcoded in ssd1306 lib)
-#define DC_PIN 17  // Data Command
-#define CE_PIN 5   // Chip Enable
-#define RST_PIN 16 // Reset
 
 //==================================================================================================
 // ENUMS - STRUCTS - TYPEDEFS
@@ -93,7 +84,7 @@ esp_err_t lcd_init(void)
     ringbuf_lcd_humidity = ringbuf_init(ringbuf_lcd_humidity_data_, CONFIG_LCD_RINGBUF_DATA_LEN);
     initialize_my_font_6x8();
     ssd1306_setFixedFont(my_font_6x8);
-    pcd8544_84x48_spi_init(RST_PIN, CE_PIN, DC_PIN);
+    pcd8544_84x48_spi_init(LCD_RST_PIN, LCD_CE_PIN, LCD_DC_PIN);
     ssd1306_clearScreen();
     return ESP_OK;
 }

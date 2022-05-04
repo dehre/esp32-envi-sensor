@@ -5,6 +5,7 @@
 #include "ble.h"
 #include "button.h"
 #include "debug_heartbeat.h"
+#include "envi_config.h"
 #include "lcd.h"
 
 #include "esp_err.h"
@@ -20,18 +21,6 @@
 
 #define ESP_LOG_TAG "MAIN"
 #include "iferr.h"
-
-//
-// Task Priorities
-//
-#define TASK_PRIORITY_MAIN 1                          // priority of main task, for reference
-#define TASK_PRIORITY_MAX (configMAX_PRIORITIES - 1U) // max priority that can be assigned, for reference
-#define TASK_PRIORITY_READ_SENSOR 2
-#define TASK_PRIORITY_UPDATE_BLE 2
-#define TASK_PRIORITY_UPDATE_LCD_RING_BUFFER 2
-#define TASK_PRIORITY_RENDER_LCD_VIEW 2
-
-#define TASK_STACK_DEPTH 2048
 
 //==================================================================================================
 // ENUMS - STRUCTS - TYPEDEFS
@@ -82,11 +71,11 @@ void app_main(void)
     binqueue_lcd = xQueueCreate(1, sizeof(sensor_reading_t));
     binsemaphore_lcd_render = xSemaphoreCreateBinary();
 
-    ESP_ERROR_CHECK(sht21_init(0, GPIO_NUM_32, GPIO_NUM_33, sht21_i2c_speed_standard));
     ESP_ERROR_CHECK(ble_init());
     ESP_ERROR_CHECK(button_init(button_isr_handler));
+    ESP_ERROR_CHECK(debug_heartbeat_init(HEARTBEAT_PIN));
     ESP_ERROR_CHECK(lcd_init());
-    ESP_ERROR_CHECK(debug_heartbeat_init(GPIO_NUM_25));
+    ESP_ERROR_CHECK(sht21_init(0, SENSOR_SDA_PIN, SENSOR_SCL_PIN, sht21_i2c_speed_standard));
 
     create_task(task_read_sensor, "task_read_sensor", TASK_PRIORITY_READ_SENSOR);
     create_task(task_update_ble, "task_update_ble", TASK_PRIORITY_UPDATE_BLE);
