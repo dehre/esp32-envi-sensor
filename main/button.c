@@ -21,7 +21,7 @@
 #define BUTTON_BIT_MASK (1ULL << BUTTON_PIN)
 
 #define TASK_STACK_DEPTH 2048
-#define TT_PRIORITY_DEBOUNCE_BUTTON 2
+#define TASK_PRIORITY_DEBOUNCE_BUTTON 2
 
 #define DEBOUNCE_DELAY_MS 500
 
@@ -33,9 +33,9 @@
 // STATIC PROTOTYPES
 //==================================================================================================
 
-static void create_tt_debounce_button(void);
+static void create_task_debounce_button(void);
 
-static void tt_debounce_button(void *param);
+static void task_debounce_button(void *param);
 
 //==================================================================================================
 // STATIC VARIABLES
@@ -61,7 +61,7 @@ esp_err_t button_init(gpio_isr_t isr_handler)
     IFERR_RETE(gpio_isr_handler_add(BUTTON_PIN, isr_handler, NULL), "failed to register isr_handler");
 
     binsemaphore_button_debounce = xSemaphoreCreateBinary();
-    create_tt_debounce_button();
+    create_task_debounce_button();
 
     return ESP_OK;
 }
@@ -76,15 +76,15 @@ void button_debounce(void)
 // STATIC FUNCTIONS
 //==================================================================================================
 
-static void create_tt_debounce_button(void)
+static void create_task_debounce_button(void)
 {
     TaskHandle_t task_handle = NULL;
-    xTaskCreate(tt_debounce_button, "tt_debounce_button", TASK_STACK_DEPTH, NULL, TT_PRIORITY_DEBOUNCE_BUTTON,
+    xTaskCreate(task_debounce_button, "task_debounce_button", TASK_STACK_DEPTH, NULL, TASK_PRIORITY_DEBOUNCE_BUTTON,
                 &task_handle);
     configASSERT(task_handle);
 }
 
-static void tt_debounce_button(void *param)
+static void task_debounce_button(void *param)
 {
     while (1)
     {

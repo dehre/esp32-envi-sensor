@@ -24,12 +24,12 @@
 //
 // Task Priorities
 //
-#define TT_PRIORITY_MAIN 1                          // priority of main task, for reference
-#define TT_PRIORITY_MAX (configMAX_PRIORITIES - 1U) // max priority that can be assigned, for reference
-#define TT_PRIORITY_READ_SENSOR 2
-#define TT_PRIORITY_UPDATE_BLE 2
-#define TT_PRIORITY_UPDATE_LCD_RING_BUFFER 2
-#define TT_PRIORITY_RENDER_LCD_VIEW 2
+#define TASK_PRIORITY_MAIN 1                          // priority of main task, for reference
+#define TASK_PRIORITY_MAX (configMAX_PRIORITIES - 1U) // max priority that can be assigned, for reference
+#define TASK_PRIORITY_READ_SENSOR 2
+#define TASK_PRIORITY_UPDATE_BLE 2
+#define TASK_PRIORITY_UPDATE_LCD_RING_BUFFER 2
+#define TASK_PRIORITY_RENDER_LCD_VIEW 2
 
 #define TASK_STACK_DEPTH 2048
 
@@ -51,13 +51,13 @@ static void create_task(TaskFunction_t fn, const char *const name, UBaseType_t p
 
 static void button_isr_handler(void *param);
 
-static void tt_read_sensor(void *param);
+static void task_read_sensor(void *param);
 
-static void tt_update_ble(void *param);
+static void task_update_ble(void *param);
 
-static void tt_update_lcd_ring_buffer(void *param);
+static void task_update_lcd_ring_buffer(void *param);
 
-static void tt_render_lcd_view(void *param);
+static void task_render_lcd_view(void *param);
 
 //==================================================================================================
 // STATIC VARIABLES
@@ -88,10 +88,10 @@ void app_main(void)
     ESP_ERROR_CHECK(lcd_init());
     ESP_ERROR_CHECK(debug_heartbeat_init(GPIO_NUM_25));
 
-    create_task(tt_read_sensor, "tt_read_sensor", TT_PRIORITY_READ_SENSOR);
-    create_task(tt_update_ble, "tt_update_ble", TT_PRIORITY_UPDATE_BLE);
-    create_task(tt_update_lcd_ring_buffer, "tt_update_lcd_ring_buffer", TT_PRIORITY_UPDATE_LCD_RING_BUFFER);
-    create_task(tt_render_lcd_view, "tt_render_lcd_view", TT_PRIORITY_RENDER_LCD_VIEW);
+    create_task(task_read_sensor, "task_read_sensor", TASK_PRIORITY_READ_SENSOR);
+    create_task(task_update_ble, "task_update_ble", TASK_PRIORITY_UPDATE_BLE);
+    create_task(task_update_lcd_ring_buffer, "task_update_lcd_ring_buffer", TASK_PRIORITY_UPDATE_LCD_RING_BUFFER);
+    create_task(task_render_lcd_view, "task_render_lcd_view", TASK_PRIORITY_RENDER_LCD_VIEW);
 
     vTaskDelete(NULL);
 }
@@ -114,7 +114,7 @@ static void button_isr_handler(void *param)
     xSemaphoreGiveFromISR(binsemaphore_lcd_render, NULL);
 }
 
-static void tt_read_sensor(void *param)
+static void task_read_sensor(void *param)
 {
     const TickType_t frequency = CONFIG_READ_SENSOR_FREQUENCY_MS / portTICK_PERIOD_MS;
     TickType_t lastWakeTime = xTaskGetTickCount();
@@ -157,7 +157,7 @@ static void tt_read_sensor(void *param)
     }
 }
 
-static void tt_update_ble(void *param)
+static void task_update_ble(void *param)
 {
     while (1)
     {
@@ -170,7 +170,7 @@ static void tt_update_ble(void *param)
     }
 }
 
-static void tt_update_lcd_ring_buffer(void *param)
+static void task_update_lcd_ring_buffer(void *param)
 {
     while (1)
     {
@@ -183,7 +183,7 @@ static void tt_update_lcd_ring_buffer(void *param)
     }
 }
 
-static void tt_render_lcd_view(void *param)
+static void task_render_lcd_view(void *param)
 {
     while (1)
     {

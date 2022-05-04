@@ -126,15 +126,15 @@ TODO LORIS: upload pic
 
 To understand how the different parts of the application work with each other, it's useful to know what each [FreeRTOS](https://www.freertos.org/index.html) Task is responsible for:
 
-- `tt_read_sensor`: periodically reads temperature and humidity from the SHT21 sensor and writes them to the binary queues `binqueue_ble` and `binqueue_lcd`
+- `task_read_sensor`: periodically reads temperature and humidity from the SHT21 sensor and writes them to the binary queues `binqueue_ble` and `binqueue_lcd`
 
-- `tt_update_ble`: waits for `binqueue_ble` to hold new data, gets it, and updates the temperature/humidity BLE GATT characteristics
+- `task_update_ble`: waits for `binqueue_ble` to hold new data, gets it, and updates the temperature/humidity BLE GATT characteristics
 
-- `tt_update_lcd_ring_buffer`: waits for `binqueue_ble` to hold new data, gets it, writes it to the ring-buffers `ringbuf_lcd_temperature` and `ringbuf_lcd_humidity`, and signals `binsemaphore_lcd_render`
+- `task_update_lcd_ring_buffer`: waits for `binqueue_ble` to hold new data, gets it, writes it to the ring-buffers `ringbuf_lcd_temperature` and `ringbuf_lcd_humidity`, and signals `binsemaphore_lcd_render`
 
 - `button_isr_handler`: waits from a falling edge, debounces the button, select the next view to be displayed, and signals the binary semaphore `binsemaphore_lcd_render`; this is actually an interrupt handler, not a task
 
-- `tt_render_lcd_view`: waits for `binsemaphore_lcd_render`, and re-renders the appropriate view on the lcd
+- `task_render_lcd_view`: waits for `binsemaphore_lcd_render`, and re-renders the appropriate view on the lcd
 
 In addition:
 
@@ -153,10 +153,10 @@ As recommended by [the FreeRTOS FAQ](https://www.freertos.org/FAQMem.html#StackS
 With each task being given 2048 words, these are the registered high water marks in words:
 
 ```
-tt_read_sensor:            404 words (1616 bytes)
-tt_update_ble:             420 words (1680 bytes)
-tt_update_lcd_ring_buffer: 436 words (1744 bytes)
-tt_render_lcd_view:        460 words (1840 bytes)
+task_read_sensor:            404 words (1616 bytes)
+task_update_ble:             420 words (1680 bytes)
+task_update_lcd_ring_buffer: 436 words (1744 bytes)
+task_render_lcd_view:        460 words (1840 bytes)
 ```
 
 ## Hardware Connection
@@ -223,11 +223,11 @@ This can cause the GPIO peripheral to trigger multiple interrupts, and the appli
 
 The next few lines will try to concisely explain the approach took for debouncing the button:
 
-- the `button_init` function, after setting up the GPIO pin, creates a new FreeRTOS Task named `tt_debounce_button`
+- the `button_init` function, after setting up the GPIO pin, creates a new FreeRTOS Task named `task_debounce_button`
 
 - when the button is touched, the interrupt handler is called, interrupts are disabled, and the binary semaphore `binsemaphore_button_debounce` is signaled
 
-- the task `tt_debounce_button`, which was idle waiting for the semaphore, wakes up, waits x milliseconds, and finally re-enables the interrupts on the button
+- the task `task_debounce_button`, which was idle waiting for the semaphore, wakes up, waits x milliseconds, and finally re-enables the interrupts on the button
 
 This approach allows a single function call, made in the ISR handler, to acknowledge and debounce the button without 1. adding delays to the application, and 2. requiring a second function call to re-enable interrupts.
 
