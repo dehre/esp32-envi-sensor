@@ -2,7 +2,7 @@
 // INCLUDES
 //==================================================================================================
 
-#include "lcd_manager.h"
+#include "lcd.h"
 
 #include "ringbuf.h"
 
@@ -16,7 +16,7 @@
 // DEFINES - MACROS
 //==================================================================================================
 
-#define ESP_LOG_TAG "LCD_MANAGER"
+#define ESP_LOG_TAG "ENVI_SENSOR_LCD"
 
 #define MY_FONT_6x8_LEN 581 // enough memory to hold a copy of ssd1306xled_font6x8
 #define APOSTROPHE_IDX 46   // index of `'` in ssd1306xled_font6x8
@@ -87,7 +87,7 @@ static lcd_view_t lcd_view = LCD_VIEW_LAST_READINGS;
 // GLOBAL FUNCTIONS
 //==================================================================================================
 
-esp_err_t lcd_manager_init(void)
+esp_err_t lcd_init(void)
 {
     ringbuf_lcd_temperature = ringbuf_init(ringbuf_lcd_temperature_data_, CONFIG_LCD_RINGBUF_DATA_LEN);
     ringbuf_lcd_humidity = ringbuf_init(ringbuf_lcd_humidity_data_, CONFIG_LCD_RINGBUF_DATA_LEN);
@@ -98,22 +98,22 @@ esp_err_t lcd_manager_init(void)
     return ESP_OK;
 }
 
-void lcd_manager_store_temperature(float temperature)
+void lcd_store_temperature(float temperature)
 {
     ringbuf_put(&ringbuf_lcd_temperature, temperature);
 }
 
-void lcd_manager_store_humidity(float humidity)
+void lcd_store_humidity(float humidity)
 {
     ringbuf_put(&ringbuf_lcd_humidity, humidity);
 }
 
-void lcd_manager_select_next_view(void)
+void lcd_select_next_view(void)
 {
     lcd_view = (lcd_view + 1) % LCD_VIEW_COUNT;
 }
 
-void lcd_manager_render(void)
+void lcd_render(void)
 {
     switch (lcd_view)
     {

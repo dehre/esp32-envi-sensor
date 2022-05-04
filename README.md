@@ -140,7 +140,7 @@ In addition:
 
 - the module `ble` takes care of setting up the BLE server and updating the temperature and humidity GATT characteristics
 
-- the module `lcd_manager` takes care of rendering appropriate view on the Nokia 5110 display
+- the module `lcd` takes care of rendering appropriate view on the Nokia 5110 display
 
 - the module `button_manager` takes care of initializing the GPIO peripheral for the lcd-button (with internal pull-up resistor and interrupt on falling edges) and debouncing it when needed
 
@@ -254,7 +254,7 @@ The `ssd1306` library cannot render non-ASCII characters, so it displays an empt
 ssd1306_printFixed(0,  8, "100°C", STYLE_NORMAL);
 ```
 
-To work around this limitation, the `lcd_manager` module `memcpy`'es the existing ASCII font in a static variable, and replaces the bitmap for the `'` character (which isn't needed anyway) with the bitmap for the `°` character.  
+To work around this limitation, the `lcd` module `memcpy` the existing ASCII font in a static variable, and replaces the bitmap for the `'` character (which isn't needed anyway) with the bitmap for the `°` character.  
 As consequence, each time the `'` is used, the `°` character is displayed.
 
 More info at this link: https://github.com/lexus2k/ssd1306/issues/139#issuecomment-1106239972

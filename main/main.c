@@ -5,7 +5,7 @@
 #include "ble.h"
 #include "button_manager.h"
 #include "debug_heartbeat.h"
-#include "lcd_manager.h"
+#include "lcd.h"
 
 #include "esp_err.h"
 #include "esp_log.h"
@@ -85,7 +85,7 @@ void app_main(void)
     ESP_ERROR_CHECK(sht21_init(0, GPIO_NUM_32, GPIO_NUM_33, sht21_i2c_speed_standard));
     ESP_ERROR_CHECK(ble_init());
     ESP_ERROR_CHECK(button_manager_init(button_isr_handler));
-    ESP_ERROR_CHECK(lcd_manager_init());
+    ESP_ERROR_CHECK(lcd_init());
     ESP_ERROR_CHECK(debug_heartbeat_init(GPIO_NUM_25));
 
     create_task(tt_read_sensor, "tt_read_sensor", TT_PRIORITY_READ_SENSOR);
@@ -110,7 +110,7 @@ static void create_task(TaskFunction_t fn, const char *const name, UBaseType_t p
 static void button_isr_handler(void *param)
 {
     button_manager_debounce();
-    lcd_manager_select_next_view();
+    lcd_select_next_view();
     xSemaphoreGiveFromISR(binsemaphore_lcd_render, NULL);
 }
 
@@ -177,8 +177,8 @@ static void tt_update_lcd_ring_buffer(void *param)
         sensor_reading_t reading;
         if (xQueueReceive(binqueue_lcd, &reading, portMAX_DELAY))
         {
-            lcd_manager_store_temperature(reading.temperature);
-            lcd_manager_store_humidity(reading.humidity);
+            lcd_store_temperature(reading.temperature);
+            lcd_store_humidity(reading.humidity);
         }
     }
 }
@@ -190,6 +190,6 @@ static void tt_render_lcd_view(void *param)
         while (!xSemaphoreTake(binsemaphore_lcd_render, portMAX_DELAY))
         {
         }
-        lcd_manager_render();
+        lcd_render();
     }
 }

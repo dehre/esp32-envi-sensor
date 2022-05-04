@@ -1,7 +1,7 @@
 set(c_SRCS
     main.c
     ble.c
-    lcd_manager.c
+    lcd.c
     button_manager.c
     ringbuf.c
     store_float_into_uint8_arr.c
