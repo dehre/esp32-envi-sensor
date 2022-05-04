@@ -193,7 +193,6 @@ static const esp_gatts_attr_db_t gatt_db[IDX_COUNT] =
 
 esp_err_t ble_init(void)
 {
-    ESP_LOGI(ESP_LOG_TAG, "%s - initialize", __func__);
     esp_err_t ret = nvs_flash_init();
     if (ret == ESP_ERR_NVS_NO_FREE_PAGES || ret == ESP_ERR_NVS_NEW_VERSION_FOUND)
     {
@@ -280,7 +279,7 @@ static void gatts_event_handler(esp_gatts_cb_event_t event, esp_gatt_if_t gatts_
     /* If event is register event, store the gatts_if for each profile */
     if (event == ESP_GATTS_REG_EVT)
     {
-        ESP_LOGI(ESP_LOG_TAG, "ESP_GATTS_REG_EVT");
+        ESP_LOGD(ESP_LOG_TAG, "ESP_GATTS_REG_EVT");
         if (param->reg.status != ESP_GATT_OK)
         {
             ESP_LOGE(ESP_LOG_TAG, "reg app failed, app_id %04x, status %d", param->reg.app_id, param->reg.status);
@@ -307,7 +306,7 @@ static void gatts_profile_event_handler(esp_gatts_cb_event_t event, esp_gatt_if_
     switch (event)
     {
     case ESP_GATTS_REG_EVT: {
-        ESP_LOGI(ESP_LOG_TAG, "ESP_GATTS_REG_EVT");
+        ESP_LOGD(ESP_LOG_TAG, "ESP_GATTS_REG_EVT");
         IFERR_LOG(esp_ble_gap_set_device_name(BLE_DEVICE_NAME), "set device name failed");
         IFERR_LOG(esp_ble_gap_config_adv_data(&adv_data), "config adv data failed");
         IFERR_LOG(esp_ble_gatts_create_attr_tab(gatt_db, gatts_if, IDX_COUNT, SERVICE_INSTANCE_ID),
@@ -320,15 +319,14 @@ static void gatts_profile_event_handler(esp_gatts_cb_event_t event, esp_gatt_if_
         IFERR_RETV(gatts_read_event_handler(gatts_if, param), "failed to handle ESP_GATTS_READ_EVT");
         break;
     case ESP_GATTS_MTU_EVT:
-        ESP_LOGI(ESP_LOG_TAG, "ESP_GATTS_MTU_EVT, MTU %d", param->mtu.mtu);
+        ESP_LOGD(ESP_LOG_TAG, "ESP_GATTS_MTU_EVT, MTU %d", param->mtu.mtu);
         break;
     case ESP_GATTS_START_EVT:
-        ESP_LOGI(ESP_LOG_TAG, "SERVICE_START_EVT, status %d, service_handle %d", param->start.status,
+        ESP_LOGD(ESP_LOG_TAG, "SERVICE_START_EVT, status %d, service_handle %d", param->start.status,
                  param->start.service_handle);
         break;
     case ESP_GATTS_CONNECT_EVT:
         ESP_LOGI(ESP_LOG_TAG, "ESP_GATTS_CONNECT_EVT, conn_id = %d", param->connect.conn_id);
-        esp_log_buffer_hex(ESP_LOG_TAG, param->connect.remote_bda, 6);
         esp_ble_conn_update_params_t conn_params = {0};
         memcpy(conn_params.bda, param->connect.remote_bda, sizeof(esp_bd_addr_t));
         conn_params.latency = 0;
@@ -342,7 +340,7 @@ static void gatts_profile_event_handler(esp_gatts_cb_event_t event, esp_gatt_if_
         esp_ble_gap_start_advertising(&adv_params);
         break;
     case ESP_GATTS_CREAT_ATTR_TAB_EVT: {
-        ESP_LOGI(ESP_LOG_TAG, "ESP_GATTS_CREAT_ATTR_TAB_EVT");
+        ESP_LOGD(ESP_LOG_TAG, "ESP_GATTS_CREAT_ATTR_TAB_EVT");
         if (param->add_attr_tab.status != ESP_GATT_OK)
         {
             ESP_LOGE(ESP_LOG_TAG, "create attribute table failed, error code=0x%x", param->add_attr_tab.status);
@@ -355,7 +353,7 @@ static void gatts_profile_event_handler(esp_gatts_cb_event_t event, esp_gatt_if_
                      param->add_attr_tab.num_handle, IDX_COUNT);
             return;
         }
-        ESP_LOGI(ESP_LOG_TAG, "create attribute table successfully, the number handle = %d\n",
+        ESP_LOGD(ESP_LOG_TAG, "create attribute table successfully, the number handle = %d\n",
                  param->add_attr_tab.num_handle);
         uint16_t environmental_sensing_handle_table[IDX_COUNT];
         memcpy(environmental_sensing_handle_table, param->add_attr_tab.handles,
@@ -373,18 +371,18 @@ static void gap_event_handler(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param
     switch (event)
     {
     case ESP_GAP_BLE_ADV_DATA_SET_COMPLETE_EVT:
-        ESP_LOGI(ESP_LOG_TAG, "ESP_GAP_BLE_ADV_DATA_SET_COMPLETE_EVT");
+        ESP_LOGD(ESP_LOG_TAG, "ESP_GAP_BLE_ADV_DATA_SET_COMPLETE_EVT");
         esp_ble_gap_start_advertising(&adv_params);
         break;
     case ESP_GAP_BLE_ADV_START_COMPLETE_EVT:
-        ESP_LOGI(ESP_LOG_TAG, "ESP_GAP_BLE_ADV_START_COMPLETE_EVT");
+        ESP_LOGD(ESP_LOG_TAG, "ESP_GAP_BLE_ADV_START_COMPLETE_EVT");
         if (param->adv_start_cmpl.status != ESP_BT_STATUS_SUCCESS)
         {
             ESP_LOGE(ESP_LOG_TAG, "advertising start failed");
         }
         break;
     case ESP_GAP_BLE_UPDATE_CONN_PARAMS_EVT:
-        ESP_LOGI(ESP_LOG_TAG,
+        ESP_LOGD(ESP_LOG_TAG,
                  "ESP_GAP_BLE_UPDATE_CONN_PARAMS_EVT, status = %d, min_int = %d, max_int = %d,conn_int = %d,latency = "
                  "%d, timeout = %d",
                  param->update_conn_params.status, param->update_conn_params.min_int, param->update_conn_params.max_int,

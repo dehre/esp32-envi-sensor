@@ -20,7 +20,7 @@
 // DEFINES - MACROS
 //==================================================================================================
 
-#define ESP_LOG_TAG "MAIN"
+#define ESP_LOG_TAG "ENVI_SENSOR_MAIN"
 #include "iferr.h"
 
 //==================================================================================================
@@ -68,6 +68,7 @@ static SemaphoreHandle_t binsemaphore_lcd_render = NULL;
 
 void app_main(void)
 {
+    ESP_LOGI(ESP_LOG_TAG, "initialize peripherals and tasks");
     binqueue_ble = xQueueCreate(1, sizeof(sensor_reading_t));
     binqueue_lcd = xQueueCreate(1, sizeof(sensor_reading_t));
     binsemaphore_lcd_render = xSemaphoreCreateBinary();
@@ -110,6 +111,7 @@ static void task_read_sensor(void *param)
     TickType_t lastWakeTime = xTaskGetTickCount();
     while (1)
     {
+        ESP_LOGI(ESP_LOG_TAG, "read sensor");
         esp_err_t err;
         float temperature_reading;
         float humidity_reading;
@@ -154,6 +156,7 @@ static void task_update_ble(void *param)
         sensor_reading_t reading;
         if (xQueueReceive(binqueue_ble, &reading, portMAX_DELAY))
         {
+            ESP_LOGI(ESP_LOG_TAG, "update ble charact , temp: %f humid: %f", reading.temperature, reading.humidity);
             IFERR_LOG(ble_write_temperature(reading.temperature), "failed to write temperature");
             IFERR_LOG(ble_write_humidity(reading.humidity), "failed to write humidity");
         }
@@ -167,6 +170,7 @@ static void task_update_lcd_ring_buffer(void *param)
         sensor_reading_t reading;
         if (xQueueReceive(binqueue_lcd, &reading, portMAX_DELAY))
         {
+            ESP_LOGI(ESP_LOG_TAG, "update ring-buffers, temp: %f humid: %f", reading.temperature, reading.humidity);
             lcd_store_temperature(reading.temperature);
             lcd_store_humidity(reading.humidity);
         }
@@ -180,6 +184,7 @@ static void task_render_lcd_view(void *param)
         while (!xSemaphoreTake(binsemaphore_lcd_render, portMAX_DELAY))
         {
         }
+        ESP_LOGI(ESP_LOG_TAG, "render lcd");
         lcd_render();
     }
 }

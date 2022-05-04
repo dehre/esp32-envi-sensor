@@ -106,6 +106,7 @@ void lcd_select_next_view(void)
 
 void lcd_render(void)
 {
+    ESP_LOGD(ESP_LOG_TAG, "render view #%d", lcd_view);
     switch (lcd_view)
     {
     case LCD_VIEW_CURRENT_READINGS:

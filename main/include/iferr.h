@@ -14,8 +14,6 @@
  * ```
  */
 
-// TODO LORIS: make `format` argument optional, with a better log string
-
 #ifdef ESP_LOG_TAG
 
 #include "esp_err.h"
@@ -28,7 +26,8 @@
         esp_err_t err_rc_ = (x);                                                                                       \
         if (err_rc_ != ESP_OK)                                                                                         \
         {                                                                                                              \
-            ESP_LOGE(ESP_LOG_TAG, "%s - " format ", error = %s", __func__, ##args, esp_err_to_name(err_rc_));          \
+            ESP_LOGE(ESP_LOG_TAG, "%s failed: %s - " format "\n\tfile: \"%s\" line: %d func: %s", #x,                  \
+                     esp_err_to_name(err_rc_), ##args, __FILE__, __LINE__, __FUNCTION__);                              \
         }                                                                                                              \
     })
 
@@ -40,7 +39,8 @@
         esp_err_t err_rc_ = (x);                                                                                       \
         if (err_rc_ != ESP_OK)                                                                                         \
         {                                                                                                              \
-            ESP_LOGE(ESP_LOG_TAG, "%s - " format ", error = %s", __func__, ##args, esp_err_to_name(err_rc_));          \
+            ESP_LOGE(ESP_LOG_TAG, "%s failed: %s - " format "\n\tfile: \"%s\" line: %d func: %s", #x,                  \
+                     esp_err_to_name(err_rc_), ##args, __FILE__, __LINE__, __FUNCTION__);                              \
             return;                                                                                                    \
         }                                                                                                              \
     })
@@ -53,7 +53,8 @@
         esp_err_t err_rc_ = (x);                                                                                       \
         if (err_rc_ != ESP_OK)                                                                                         \
         {                                                                                                              \
-            ESP_LOGE(ESP_LOG_TAG, "%s - " format ", error = %s", __func__, ##args, esp_err_to_name(err_rc_));          \
+            ESP_LOGE(ESP_LOG_TAG, "%s failed: %s - " format "\n\tfile: \"%s\" line: %d func: %s", #x,                  \
+                     esp_err_to_name(err_rc_), ##args, __FILE__, __LINE__, __FUNCTION__);                              \
             return err_rc_;                                                                                            \
         }                                                                                                              \
     })
