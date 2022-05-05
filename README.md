@@ -16,14 +16,13 @@ With the help of the onboard button, the user can choose among three different v
 
 Both the reading frequency (default: every 30 sec) and the number of readings stored (default: 240) can be adjusted upon compilation using the [KConfig TUI](https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-reference/kconfig.html) (see below).
 
-TODO LORIS: update link iOS
-
 Last but not least, the Envi Sensor acts as a [Bluetooth Low Energy](https://learn.adafruit.com/introduction-to-bluetooth-low-energy) (BLE) GATT Server, from which a smartphone (or any BLE-enabled device) can read the current temperature and humidity.  
 This [example iOS application](https://github.com/dehre/ios-envi-sensor), acting as a GATT Client, connects to the Envi Sensor and requests new data every 15 seconds.
 
-TODO LORIS: upload picture
 
-TODO LORIS: upload link to youtube video, stating that reading frequency has been decreased to 500ms
+<img src="readme_assets/esp32-envi-sensor.jpeg" width=70% height=70%>
+
+This [video shows how the device operates](https://www.youtube.com/watch?v=2RcRE0_-OhI) (reading frequency had been decreased to 500ms).
 
 ## README Sections
 
