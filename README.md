@@ -19,7 +19,7 @@ Both the reading frequency (default: every 30 sec) and the number of readings st
 TODO LORIS: update link iOS
 
 Last but not least, the Envi Sensor acts as a [Bluetooth Low Energy](https://learn.adafruit.com/introduction-to-bluetooth-low-energy) (BLE) GATT Server, from which a smartphone (or any BLE-enabled device) can read the current temperature and humidity.  
-This [example iOS application](github.com/dehre/ios-envi-sensor), acting as a GATT Client, connects to the Envi Sensor and requests new data every 15 seconds.
+This [example iOS application](https://github.com/dehre/ios-envi-sensor), acting as a GATT Client, connects to the Envi Sensor and requests new data every 15 seconds.
 
 TODO LORIS: upload picture
 
@@ -177,7 +177,7 @@ idf.py menuconfig # will open a terminal-based project configuration menu
 idf.py build
 ```
 
-TODO LORIS: upload pic
+![](readme_assets/kconfig-tui.png)
 
 ## Tasks Overview
 
